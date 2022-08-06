@@ -1,0 +1,19 @@
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/pack-targets.cmake")
+
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/CMakeFiles")
+    set(PACK_DIR     "@CMAKE_CURRENT_SOURCE_DIR@")
+    set(PACK_BIN_DIR "@CMAKE_CURRENT_BINARY_DIR@")
+else()
+    set_and_check(PACK_DIR     "@PACKAGE_CMAKE_INSTALL_DIR@")
+    set_and_check(PACK_BIN_DIR "@PACKAGE_CMAKE_INSTALL_BINDIR@")
+endif()
+
+# Append ourselfs to search path
+list(APPEND CMAKE_PREFIX_PATH "${PACK_DIR}/../")
+
+include(${PACK_DIR}/../protoc/cmake/protogen.cmake)
+
+if (NOT PACK_FOUND)
+    set(PACK_FOUND ON CACHE INTERNAL "" FORCE)
+endif()
