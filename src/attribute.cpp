@@ -18,7 +18,7 @@
 ========================================================================================================================================= */
 #include "pack/attribute.h"
 
-pack::Attribute::Attribute(NodeType type, const pack::string_t& key)
+pack::Attribute::Attribute(NodeType type, const pack::UString& key)
     : m_key(key)
     , m_type(type)
 {
@@ -28,19 +28,14 @@ pack::Attribute::~Attribute()
 {
 }
 
-const pack::string_t& pack::Attribute::key() const
+const pack::UString& pack::Attribute::key() const
 {
     return m_key;
 }
 
-bool pack::Attribute::operator==(const pack::Attribute& other) const
+int pack::Attribute::operator<=>(const pack::Attribute& other) const
 {
     return compare(other);
-}
-
-bool pack::Attribute::operator!=(const pack::Attribute& other) const
-{
-    return !compare(other);
 }
 
 pack::Attribute::NodeType pack::Attribute::type() const

@@ -5,322 +5,400 @@
    | ___| |  | |  |    \
    |_|  |__,_|____|__\__\ DSO library
 
-   Copyright (C) 2020 Eaton
-   Copyright (C) 2020-2022 zJes
+Copyright (C) 2020-2022 zJes
 
-   This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as
-   published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
-   This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as
+published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
 
-#include "pack/utils.h"
+#include <concepts>
+#include <pack/magic-enum.h>
+#include <pack/utils.h>
 #include <sstream>
 #include <string>
-#include <type_traits>
-#ifdef WITH_QSTRING
+#ifdef WITH_QT
 #include <QString>
 #endif
 
 namespace pack {
+
 // =========================================================================================================================================
 
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, std::string> || std::is_constructible_v<std::string, T>, std::string> convert(ValueT&& value)
+template <typename Return, typename Value>
+Return convert(Value&& value);
+
+template <typename Return, typename Value>
+Return convert(Value&& value, const Return& def);
+
+template <typename Return, typename Value>
+concept canConvert = requires(Value value) { convert(value)->Return; };
+
+// =========================================================================================================================================
+
+template <typename T>
+struct ConvertType
 {
-    if constexpr (std::is_same_v<std::string, ValueT>) {
+};
+
+// =========================================================================================================================================
+
+template <>
+struct ConvertType<UString>
+{
+    static UString convert(std::convertible_to<UString> auto value)
+    {
         return value;
-    } else if constexpr (std::is_floating_point_v<ValueT>) {
+    }
+    static UString convert(std::floating_point auto value)
+    {
+        return UString::fromNumber(value);
+    }
+    static UString convert(std::integral auto value)
+    {
+        return UString::fromNumber(value);
+    }
+    static UString convert(bool value)
+    {
+        return value ? "true"_s : "false"_s;
+    }
+    static UString convert(enumerableToStream auto value)
+    {
+        std::stringstream ss;
+        ss << value;
+        return UString(ss.str());
+    }
+    static UString convert(enumerable auto value)
+    {
+        return UString(magic_enum::enum_name(value).data());
+    }
+    static UString convert(const std::string& value)
+    {
+        return UString(value);
+    }
+#ifdef WITH_QT
+    static UString convert(const QString& value)
+    {
+        return UString(value);
+    }
+#endif
+};
+
+// =========================================================================================================================================
+
+template <>
+struct ConvertType<std::string>
+{
+    static std::string convert(std::convertible_to<std::string> auto value)
+    {
+        return value;
+    }
+    static std::string convert(std::floating_point auto value)
+    {
         std::stringstream ss;
         ss << value;
         return ss.str();
-    } else if constexpr (std::is_integral_v<ValueT> && !std::is_same_v<bool, ValueT>) {
+    }
+    static std::string convert(std::integral auto value)
+    {
         return std::to_string(value);
-    } else if constexpr (std::is_same_v<bool, ValueT>) {
+    }
+    static std::string convert(bool value)
+    {
         return value ? std::string{"true"} : std::string{"false"};
-    } else if constexpr (std::is_constructible_v<std::string, ValueT> && !std::is_same_v<std::string, ValueT>) {
-        return std::string{value};
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
+    }
+    static std::string convert(enumerableToStream auto value)
+    {
+        std::stringstream ss;
+        ss << value;
+        return ss.str();
+    }
+    static std::string convert(enumerable auto value)
+    {
+        return magic_enum::enum_name(value).data();
+    }
+#ifdef WITH_QT
+    static std::string convert(const QString& value)
+    {
         return value.toStdString();
-#endif
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into std::string");
     }
-}
+#endif
+};
 
 // =========================================================================================================================================
 
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, int8_t>, int8_t> convert(ValueT&& value)
+#ifdef WITH_QT
+template <>
+struct ConvertType<QString>
 {
-    if constexpr (std::is_same_v<int8_t, ValueT>) {
+    static QString convert(std::convertible_to<QString> auto value)
+    {
         return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return type(std::stoi(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return type(value.toShort());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<int8_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into int8_t");
     }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, uint8_t>, uint8_t> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<uint8_t, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return uint8_t(std::stoul(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return uint8_t(value.toUShort());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<uint8_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into uint8_t");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, int16_t>, int16_t> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<int16_t, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return int16_t(std::stoi(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return int16_t(value.toInt());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<int16_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into int16_t");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, uint16_t>, uint16_t> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<uint16_t, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return uint16_t(std::stoul(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return uint16_t(value.toUInt());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<uint16_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into uint16_t");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, int32_t>, int32_t> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<int32_t, ValueT>) {
-        return int32_t(value);
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return int32_t(std::stol(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return int32_t(value.toLong());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<int32_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into int32_t");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, uint32_t>, uint32_t> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<uint32_t, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return uint32_t(std::stoul(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return uint32_t(value.toULong());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<uint32_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into uint32_t");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, int64_t>, int64_t> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<int64_t, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return int64_t(std::stoll(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return int64_t(value.toLongLong());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<int64_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into int64_t");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, uint64_t>, uint64_t> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<uint64_t, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return uint64_t(std::stoull(value));
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return uint64_t(value.toULongLong());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<uint64_t>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into uint64_t");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, float>, float> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<float, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return std::stof(value);
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return float(value.toDouble());
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<float>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into float");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, double>, double> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<double, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        return std::stod(value);
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        return value.toDouble();
-#endif
-    } else if constexpr (std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>) {
-        return static_cast<double>(value);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into double");
-    }
-}
-
-// =========================================================================================================================================
-
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, bool>, bool> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<bool, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        auto lower = tolower(value);
-        return lower == "true" || lower == "1" || lower == "on";
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        auto lower = value.toLower();
-        return lower == "true"_s || lower == "1"_s || lower == "on"_s;
-#endif
-    } else if constexpr (std::is_integral_v<ValueT>) {
-        return value != 0;
-    } else if constexpr (std::is_floating_point_v<ValueT>) {
-        return value > ValueT(0.f) || value < ValueT(0.f);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into bool");
-    }
-}
-
-// =========================================================================================================================================
-
-#ifdef WITH_QTSTRING
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, QString>, QString> convert(ValueT&& value)
-{
-    if constexpr (std::is_same_v<QString, ValueT> || std::is_convertible_v<QString, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
+    static QString convert(std::convertible_to<std::string> auto value)
+    {
         return QString::fromStdString(value);
-    } else if constexpr (std::is_integral_v<ValueT> && !std::is_same_v<bool, ValueT>) {
-        return QString::number(value);
-    } else if constexpr (std::is_floating_point_v<ValueT>) {
-        return QString::number(double(value));
-    } else if constexpr (std::is_same_v<bool, ValueT>) {
-        return value ? "true"_s : "false"_s;
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into QString");
     }
-}
+    static QString convert(std::floating_point auto value)
+    {
+        return QString::number(value);
+    }
+    static QString convert(std::integral auto value)
+    {
+        return QString::number(value);
+    }
+    static QString convert(bool value)
+    {
+        return value ? QStringLiteral("true") : QStringLiteral("false");
+    }
+    static QString convert(enumerableToStream auto value)
+    {
+        std::stringstream ss;
+        ss << value;
+        return QString::fromStdString(ss.str());
+    }
+    static QString convert(enumerable auto value)
+    {
+        return QString::fromStdString(magic_enum::enum_name(value).data());
+    }
+};
 #endif
 
-template <typename T, typename ValueT>
-std::enable_if_t<std::is_same_v<T, std::vector<std::byte>>, std::vector<std::byte>> convert(ValueT&& value)
+// =========================================================================================================================================
+
+template <typename T>
+requires std::signed_integral<T>
+struct ConvertType<T>
 {
-    if constexpr (std::is_same_v<std::vector<std::byte>, ValueT> || std::is_convertible_v<std::vector<std::byte>, ValueT>) {
-        return value;
-    } else if constexpr (std::is_constructible_v<std::string, ValueT>) {
-        std::string data = value;
-        auto        val  = reinterpret_cast<const std::byte*>(data.c_str());
-        return std::vector<std::byte>(val, val + data.size());
-#ifdef WITH_QTSTRING
-    } else if constexpr (std::is_same_v<QString, ValueT>) {
-        auto val = reinterpret_cast<const std::byte*>(value.data());
-        return std::vector<std::byte>(val, val + value.size());
-#endif
-    } else if constexpr ((std::is_integral_v<ValueT> || std::is_floating_point_v<ValueT>)&&!std::is_same_v<bool, ValueT>) {
-        auto val = reinterpret_cast<const std::byte*>(&value);
-        return std::vector<std::byte>(val, val + sizeof(value));
-    } else if constexpr (std::is_same_v<bool, ValueT>) {
-        return std::vector<std::byte>(value ? 1 : 0);
-    } else {
-        static_assert(always_false<ValueT>, "Unsupported type to cast into std::vector<std::byte>");
+    static T convert(std::same_as<UString> auto value)
+    {
+        return value.template toNumber<T>();
     }
+    static T convert(std::convertible_to<std::string> auto&& value)
+    {
+        if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t>) {
+            return static_cast<T>(std::stoi(value));
+        } else if constexpr (std::is_same_v<T, int32_t>) {
+            return static_cast<T>(std::stol(value));
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+            return static_cast<T>(std::stoll(value));
+        } else {
+            static_assert(always_false<T>, "Unsupported type to cast into signed integral type");
+        }
+    }
+    static T convert(std::floating_point auto value)
+    {
+        return static_cast<T>(value);
+    }
+    static T convert(std::integral auto value)
+    {
+        return static_cast<T>(value);
+    }
+    static T convert(enumerable auto value)
+    {
+        return static_cast<T>(value);
+    }
+    static T convert(bool value)
+    {
+        return value ? 1 : 0;
+    }
+#ifdef WITH_QT
+    static int8_t convert(const QString& value)
+    {
+        if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t>) {
+            return static_cast<T>(value.toInt());
+        } else if constexpr (std::is_same_v<T, int32_t>) {
+            return static_cast<T>(value.toLong());
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+            return static_cast<T>(value.toLongLong());
+        } else {
+            static_assert(always_false<T>, "Unsupported type to cast into signed integral type");
+        }
+    }
+#endif
+};
+
+// =========================================================================================================================================
+
+template <typename T>
+requires std::unsigned_integral<T>
+struct ConvertType<T>
+{
+    static T convert(std::same_as<UString> auto&& value)
+    {
+        return value.template toNumber<T>();
+    }
+    static T convert(std::convertible_to<std::string> auto&& value)
+    {
+        if constexpr (std::is_same_v<T, uint8_t> || std::is_same_v<T, uint16_t>) {
+            return static_cast<T>(std::stoul(value));
+        } else if constexpr (std::is_same_v<T, uint32_t>) {
+            return static_cast<T>(std::stoul(value));
+        } else if constexpr (std::is_same_v<T, uint64_t>) {
+            return static_cast<T>(std::stoull(value));
+        } else {
+            static_assert(always_false<T>, "Unsupported type to cast into unsigned integral type");
+        }
+    }
+    static T convert(std::floating_point auto&& value)
+    {
+        return static_cast<T>(value);
+    }
+    static T convert(std::integral auto&& value)
+    {
+        return static_cast<T>(value);
+    }
+    static T convert(bool&& value)
+    {
+        return value ? 1 : 0;
+    }
+#ifdef WITH_QT
+    static int8_t convert(QString&& value)
+    {
+        if constexpr (std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t>) {
+            return static_cast<T>(value.toUInt());
+        } else if constexpr (std::is_same_v<T, int32_t>) {
+            return static_cast<T>(value.toULong());
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+            return static_cast<T>(value.toULongLong());
+        } else {
+            static_assert(always_false<T>, "Unsupported type to cast into unsigned integral type");
+        }
+    }
+#endif
+};
+
+// =========================================================================================================================================
+
+template <typename T>
+requires std::floating_point<T>
+struct ConvertType<T>
+{
+    static T convert(std::same_as<UString> auto&& value)
+    {
+        return value.template toNumber<T>();
+    }
+    static T convert(std::convertible_to<std::string> auto&& value)
+    {
+        if constexpr (std::is_same_v<T, float>) {
+            return static_cast<T>(std::stof(value));
+        } else if constexpr (std::is_same_v<T, double>) {
+            return static_cast<T>(std::stod(value));
+        } else {
+            static_assert(always_false<T>, "Unsupported type to cast into floating type");
+        }
+    }
+    static T convert(std::floating_point auto&& value)
+    {
+        return static_cast<T>(value);
+    }
+    static T convert(std::integral auto&& value)
+    {
+        return static_cast<T>(value);
+    }
+    static T convert(bool&& value)
+    {
+        return value ? 1 : 0;
+    }
+#ifdef WITH_QT
+    static int8_t convert(QString&& value)
+    {
+        if constexpr (std::is_same_v<T, float>) {
+            return static_cast<T>(value.toFloat());
+        } else if constexpr (std::is_same_v<T, double>) {
+            return static_cast<T>(value.toDouble());
+        } else {
+            static_assert(always_false<T>, "Unsupported type to cast into floating type");
+        }
+    }
+#endif
+};
+
+// =========================================================================================================================================
+
+template <>
+struct ConvertType<bool>
+{
+    static bool convert(std::convertible_to<UString> auto&& value)
+    {
+        return UString(value) == "true"_s || UString(value) == "1"_s || UString(value) == "on"_s;
+    }
+    static bool convert(std::floating_point auto&& value)
+    {
+        return value != 0;
+    }
+    static bool convert(std::integral auto&& value)
+    {
+        return value != 0;
+    }
+    static bool convert(bool&& value)
+    {
+        return value;
+    }
+#ifdef WITH_QT
+    static int8_t convert(QString&& value)
+    {
+        return value == "true"_s || value == "1"_s || value == "on"_s;
+    }
+#endif
+};
+
+// =========================================================================================================================================
+
+template <typename T>
+requires enumerable<T>
+struct ConvertType<T>
+{
+    static T convert(std::convertible_to<std::string> auto value, const T& def = {})
+    {
+        T result = def;
+        if constexpr (enumerableFromStream<T>) {
+            try {
+                std::stringstream ss;
+                ss << value;
+                ss >> result;
+            } catch (const std::exception&) {
+                result = def;
+            }
+        } else {
+            if (auto re = magic_enum::enum_cast<T>(value); re) {
+                result = re.value();
+            }
+        }
+        return result;
+    }
+    static T convert(std::integral auto value, const T& def = {})
+    {
+        if (auto re = magic_enum::enum_cast<T>(value); re) {
+            return re.value();
+        }
+        return def;
+    }
+    static T convert(const UString& value, const T& def = {})
+    {
+        return ConvertType<T>::convert(value.toStdString(), def);
+    }
+};
+
+// =========================================================================================================================================
+
+template <typename Return, typename Value>
+Return convert(Value&& value)
+{
+    return ConvertType<Return>::convert(std::forward<Value>(value));
 }
+
+template <typename Return, typename Value>
+Return convert(Value&& value, const Return& def)
+{
+    return ConvertType<Return>::convert(std::forward<Value>(value), def);
+}
+
+// =========================================================================================================================================
 
 } // namespace pack

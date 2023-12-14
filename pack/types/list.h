@@ -31,8 +31,9 @@ namespace pack {
 class IList : public Attribute
 {
 public:
-    template <typename... Options, typename = isOptions<Options...>>
+    template <typename... Options>
     explicit IList(Options&&... options)
+    requires allIsOptions<Options...>
         : Attribute(NodeType::List, std::forward<Options>(options)...)
     {
     }
@@ -63,14 +64,26 @@ public:
     using ValueType     = typename T::CppType;
 
 public:
-    template <typename... Options, typename = isOptions<Options...>>
-    List(ListType&& value, Options&&... opts);
+    List(List&& value) = default;
+    List(const List& value) = default;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    List(std::initializer_list<T> values, Options&&... opts);
+    List& operator=(const List& other) = default;
+    List& operator=(List&& other) = default;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    List(Options&&... opts);
+    List(ListType&& value);
+    List(const ListType& value);
+
+    template <typename... Options>
+    List(ListType&& value, Options&&... opts)
+    requires isValueConstructable<T, ListType> && allIsOptions<Options...>;
+
+    template <typename... Options>
+    List(std::initializer_list<T> values, Options&&... opts)
+    requires isValueConstructable<T, ValueType> && allIsOptions<Options...>;
+
+    template <typename... Options>
+    List(Options&&... opts)
+    requires allIsOptions<Options...>;
 
 public:
     const ListType& toVector() const;
@@ -78,10 +91,14 @@ public:
 
     void setVector(const ListType&);
     void setVector(ListType&&);
-    template <typename TT, typename = std::enable_if_t<IsValueList::value && isValueConstructable<TT, ValueType>::value>>
-    void setVector(std::vector<TT>&& value);
-    template <typename TT, typename = std::enable_if_t<IsValueList::value && isValueConstructable<TT, ValueType>::value>>
-    void setVector(const std::vector<TT>& value);
+
+    template <typename TT>
+    void setVector(std::vector<TT>&& value)
+    requires isValueConstructable<TT, ValueType>;
+
+    template <typename TT>
+    void setVector(const std::vector<TT>& value)
+    requires isValueConstructable<TT, ValueType>;
 
     void operator=(std::initializer_list<ValueType> values);
     bool operator==(const std::vector<ValueType>& values) const;
@@ -107,11 +124,16 @@ public:
     void append(const List& value);
     void append(List::ListType&& value);
     void append(const List::ListType& value);
-    template <typename TT, typename = std::enable_if_t<IsValueList::value && isValueConstructable<TT, ValueType>::value>>
-    void append(std::vector<TT>&& value);
-    template <typename TT, typename = std::enable_if_t<IsValueList::value && isValueConstructable<TT, ValueType>::value>>
-    void append(const std::vector<TT>& value);
-    T&   append();
+
+    template <typename TT>
+    void append(std::vector<TT>&& value)
+    requires isValueConstructable<TT, ValueType>;
+
+    template <typename TT>
+    void append(const std::vector<TT>& value)
+    requires isValueConstructable<TT, ValueType>;
+
+    T& append();
 
     const T& operator[](int index) const;
     T&       operator[](int index);
@@ -135,17 +157,15 @@ public:
     List sorted(Func&& func) const;
     List sorted() const;
 
-    bool empty() const;
-
 public:
-    bool     compare(const Attribute& other) const override;
-    string_t typeName() const override;
-    void     set(const Attribute& other) override;
-    void     set(Attribute&& other) override;
-    bool     hasValue() const override;
-    void     clear() override;
+    int     compare(const Attribute& other) const override;
+    UString typeName() const override;
+    void    set(const Attribute& other) override;
+    void    set(Attribute&& other) override;
+    bool    empty() const override;
+    void    clear() override;
 
-    static string_t _typeName();
+    static UString _typeName();
 
 private:
     ListType m_value;

@@ -21,7 +21,6 @@
 #include "pack/attribute.h"
 #include "pack/expected.h"
 #include "pack/utils.h"
-#include <string>
 
 namespace pack {
 
@@ -34,32 +33,29 @@ enum class Option
 
 ENABLE_FLAGS(Option)
 
+enum class Serializers
+{
+    Json,
+    Yaml
+};
+
+expected<UString> serialize(Serializers serializer, const Attribute& node, Option opt = Option::No);
+expected<void>    serializeFile(Serializers serializer, const UString& fileName, const Attribute& node, Option opt = Option::No);
+expected<void>    deserialize(Serializers serializer, const UString& content, Attribute& node);
+expected<void>    deserializeFile(Serializers serializer, const UString& fileName, Attribute& node);
+
 namespace json {
-    Expected<string_t> serialize(const Attribute& node, Option opt = Option::No);
-    Expected<void>     deserialize(const string_t& content, Attribute& node);
-    Expected<void>     deserializeFile(const string_t& fileName, Attribute& node);
-    Expected<void>     serializeFile(const string_t& fileName, const Attribute& node, Option opt = Option::No);
+    expected<UString> serialize(const Attribute& node, Option opt = Option::No);
+    expected<void>    serializeFile(const UString& fileName, const Attribute& node, Option opt = Option::No);
+    expected<void>    deserialize(const UString& content, Attribute& node);
+    expected<void>    deserializeFile(const UString& fileName, Attribute& node);
 } // namespace json
 
 namespace yaml {
-    Expected<string_t> serialize(const Attribute& node, Option opt = Option::No);
-    Expected<void>     deserialize(const string_t& content, Attribute& node);
-    Expected<void>     deserializeFile(const string_t& fileName, Attribute& node);
-    Expected<void>     serializeFile(const string_t& fileName, const Attribute& node, Option opt = Option::No);
+    expected<UString> serialize(const Attribute& node, Option opt = Option::No);
+    expected<void>    serializeFile(const UString& fileName, const Attribute& node, Option opt = Option::No);
+    expected<void>    deserialize(const UString& content, Attribute& node);
+    expected<void>    deserializeFile(const UString& fileName, Attribute& node);
 } // namespace yaml
-
-#ifdef WITH_PROTOBUF
-namespace protobuf {
-#ifdef WITH_QTSTRING
-    Expected<QByteArray> serialize(const Attribute& node, Option opt = Option::No);
-    Expected<void>       deserialize(const QByteArray& content, Attribute& node);
-    Expected<void>       deserializeFile(const QString& fileName, Attribute& node);
-#else
-    Expected<std::string> serialize(const Attribute& node, Option opt = Option::No);
-    Expected<void>        deserialize(const std::string& content, Attribute& node);
-    Expected<void>        deserializeFile(const std::string& fileName, Attribute& node);
-#endif
-} // namespace protobuf
-#endif
 
 } // namespace pack

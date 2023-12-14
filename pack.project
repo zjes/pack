@@ -1,0 +1,71 @@
+import cmake
+
+withProtobuf = cmake.Option("WITH_PROTOBUF", False)
+withQt = cmake.Option("WITH_QT", False)
+
+pack = cmake.SharedLib(
+    "pack",
+    sources = [
+        "pack/types/string.h",
+        "pack/types/list.h",
+        "pack/types/map.h",
+        "pack/types/value.h",
+        "pack/types/enum.h",
+        "pack/types/node.h",
+        "pack/types/binary.h",
+
+        "pack/types/private/string.inl",
+        "pack/types/private/list.inl",
+        "pack/types/private/map.inl",
+        "pack/types/private/value.inl",
+        "pack/types/private/enum.inl",
+        "pack/types/private/binary.inl",
+
+        "pack/pack.h",
+        "pack/attribute.h",
+        "pack/options.h",
+        "pack/types.h",
+        "pack/convert.h",
+        "pack/utils.h",
+        "pack/magic-enum.h",
+        "pack/expected.h",
+        "pack/ustring.h",
+        "pack/flags.h",
+        "pack/meta.h",
+        "pack/serialization.h",
+
+        "src/node.cpp",
+        "src/attribute.cpp",
+        "src/ustring.cpp",
+        "src/types.cpp",
+        "src/serialization.cpp",
+        "pack/private/ustring.inl"
+    ],
+    dependencies = [
+        cmake.Dependency("yaml-cpp"),
+        cmake.Dependency("nlohmann_json::nlohmann_json"),
+        cmake.Dependency("fmt::fmt", public = True)
+    ]
+)
+
+if withQt.isSet():
+    pack.dependencies.append("Qt6::Core")
+    pack.definitions.append("WITH_QT")
+    pack.definitions.append(cmake.Definition.Qt.NoCastFromAscii())
+    pack.definitions.append(cmake.Definition.Qt.NoCastToAscii())
+else:
+    pack.dependencies.append("utf8cpp")
+
+if cmake.Config.buildTesting:
+    pack.addTest([
+        "tests/ustring.cpp",
+        "tests/types.cpp",
+        "tests/convert.cpp",
+        "tests/expected.cpp",
+        "tests/value.cpp",
+        "tests/list.cpp",
+        "tests/node.cpp",
+        "tests/map.cpp",
+        "tests/enums.cpp",
+        "tests/binary.cpp",
+    ])

@@ -22,9 +22,14 @@
 
 namespace pack {
 
-inline void Binary::setString(const string_t& data)
+inline Binary::Binary()
+    : Value<Type::Bytes>()
 {
-    std::string copy = toStdString(data);
+}
+
+inline void Binary::setString(const UString& data)
+{
+    std::string copy = data.toStdString();
 
     auto val = reinterpret_cast<const std::byte*>(copy.data());
     setValue(std::vector<std::byte>(val, val + data.size()));
@@ -36,13 +41,13 @@ inline void Binary::setString(const char* data, size_t size)
     setValue(std::vector<std::byte>(val, val + size));
 }
 
-inline string_t Binary::asString() const
+inline UString Binary::asString() const
 {
     auto val = reinterpret_cast<const char*>(value().data());
-    return fromStdString(std::string(val, value().size()));
+    return UString(std::string(val, value().size()));
 }
 
-inline Binary Binary::fromString(const string_t& data)
+inline Binary Binary::fromString(const UString& data)
 {
     Binary bin;
     bin.setString(data);

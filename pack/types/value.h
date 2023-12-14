@@ -18,9 +18,9 @@
 ========================================================================================================================================= */
 #pragma once
 
-#include "pack/attribute.h"
-#include "pack/types.h"
-#include "pack/utils.h"
+#include <pack/attribute.h>
+#include <pack/types.h>
+#include <pack/utils.h>
 
 namespace pack {
 
@@ -29,8 +29,9 @@ namespace pack {
 class IValue : public Attribute
 {
 public:
-    template <typename... Options, typename = isOptions<Options...>>
+    template <typename... Options>
     IValue(Options&&... opts)
+    requires allIsOptions<Options...>
         : Attribute(NodeType::Value, opts...)
     {
     }
@@ -44,10 +45,11 @@ public:
 // =========================================================================================================================================
 
 template <typename T>
-using isValue = std::is_base_of<IValue, T>;
+concept isValue = std::is_base_of_v<IValue, T>;
+
 
 template <typename T, typename CppType>
-using isValueConstructable = std::disjunction<typename pack::isSame<CppType, T>, typename pack::isConvertable<CppType, T>>;
+concept isValueConstructable = isSame<CppType, T> || isConvertable<CppType, T>;
 
 // =========================================================================================================================================
 
@@ -56,25 +58,24 @@ class Value : public IValue
 {
 public:
     using CppType                  = typename ResolveType<ValType>::type;
-    using RefType                  = std::conditional_t<ValType == Type::String || ValType == Type::Binary, CppType&, CppType>;
-    using ConstRefType             = std::conditional_t<ValType == Type::String || ValType == Type::Binary, const CppType&, CppType>;
+    using RefType                  = std::conditional_t<ValType == Type::String || ValType == Type::Bytes, CppType&, CppType>;
+    using ConstRefType             = std::conditional_t<ValType == Type::String || ValType == Type::Bytes, const CppType&, CppType>;
     static constexpr Type ThisType = ValType;
+    using Default                  = Default<CppType>;
 
 public:
     /// ctor. Initialize value with value and options
     /// @param value value to initialize
     /// @param options options to initialize
-    template <
-        typename T,
-        typename = std::enable_if_t<isValueConstructable<T, CppType>::value>,
-        typename... Options,
-        typename = isOptions<Options...>>
-    Value(T&& value, Options&&... options);
+    template <typename T, typename... Options>
+    Value(T&& value, Options&&... options)
+    requires isValueConstructable<T, CppType> && allIsOptions<Options...>;
 
     /// ctor. Initialize value with  options
     /// @param options options to initialize
-    template <typename... Options, typename = isOptions<Options...>>
-    Value(Options&&... options);
+    template <typename... Options>
+    Value(Options&&... options)
+    requires allIsOptions<Options...>;
 
     Value(const Value& other);
     Value(Value&& other) noexcept;
@@ -92,27 +93,27 @@ public:
 
     template <typename T>
     Value& operator=(T&& val);
-           operator ConstRefType() const;
+    operator ConstRefType() const;
 
     template <typename T>
-    bool operator==(const T& val) const;
+    int operator<=>(const T& val) const
+    requires isValueConstructable<T, CppType> || std::same_as<Value<ValType>, T>;
 
-    bool operator==(const Value& other) const;
-    bool operator==(ConstRefType val) const;
-    bool operator!=(const Value& other) const;
-    bool operator!=(ConstRefType val) const;
+    template <typename T>
+    bool operator==(const T& val) const
+    requires isValueConstructable<T, CppType> || std::same_as<Value<ValType>, T>;
 
 public:
-    bool     compare(const Attribute& other) const override;
-    bool     compare(ConstRefType other) const;
-    string_t typeName() const override;
-    void     set(const Attribute& other) override;
-    void     set(Attribute&& other) override;
-    bool     hasValue() const override;
-    Type     valueType() const override;
-    void     clear() override;
+    int    compare(const Attribute& other) const override;
+    int    compare(ConstRefType other) const;
+    UString typeName() const override;
+    void   set(const Attribute& other) override;
+    void   set(Attribute&& other) override;
+    bool   empty() const override;
+    Type   valueType() const override;
+    void   clear() override;
 
-    static string_t typeInfo();
+    static UString typeInfo();
 
 protected:
     CppType m_val = {};
@@ -126,6 +127,8 @@ class NumericValue : public Value<ValType>
 {
 public:
     using Value<ValType>::Value;
+    using Value<ValType>::operator==;
+    using Value<ValType>::operator<=>;
 
     void operator+=(const NumericValue& other);
     void operator+=(typename Value<ValType>::ConstRefType other);

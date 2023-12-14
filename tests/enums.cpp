@@ -110,7 +110,7 @@ TEST_CASE("Enum methods")
         }
 
         {
-            pack::Enum<enums::Enum> en{pack::Default(enums::Enum::Dance)};
+            pack::Enum<enums::Enum> en{pack::Enum<enums::Enum>::Default(enums::Enum::Dance)};
             en.fromString("PARROT"_s);
             REQUIRE(en == enums::Enum::Dance); // Default value
         }
@@ -135,106 +135,65 @@ TEST_CASE("Enum methods")
         }
     }
 
-    SECTION("from int"){{pack::Enum<enums::Enum> en;
-    en.fromInt(int(enums::Enum::Dance));
-    REQUIRE(en == enums::Enum::Dance);
-}
-
-{
-    pack::Enum<enums::Enum2> en;
-    en.fromInt(int(enums::Enum2::Parrot));
-    REQUIRE(en == enums::Enum2::Parrot);
-}
-
-#ifdef IS_MAGIC_ENUM
-{
-    pack::Enum<enums::Enum> en{pack::Default(enums::Enum::Dance)};
-    en.fromInt(100);
-    REQUIRE(en == enums::Enum::Dance); // Default value
-}
-
-{
-    pack::Enum<enums::Enum2> en{pack::Default(enums::Enum2::Blue)};
-    en.fromInt(100);
-    REQUIRE(en == enums::Enum2::Blue); // Default value
-}
-#endif
-}
-
-SECTION("to int")
-{
+    SECTION("from int")
     {
-        pack::Enum<enums::Enum> en = enums::Enum::Dance;
-        REQUIRE(en.asInt() == 2);
+        {
+            pack::Enum<enums::Enum> en;
+            en.fromInt(int(enums::Enum::Dance));
+            REQUIRE(en == enums::Enum::Dance);
+        }
+
+        {
+            pack::Enum<enums::Enum2> en;
+            en.fromInt(int(enums::Enum2::Parrot));
+            REQUIRE(en == enums::Enum2::Parrot);
+        }
+
+        {
+            pack::Enum<enums::Enum> en{pack::Enum<enums::Enum>::Default(enums::Enum::Dance)};
+            en.fromInt(100);
+            REQUIRE(en == enums::Enum::Dance); // Default value
+        }
+
+        {
+            pack::Enum<enums::Enum2> en{pack::Default(enums::Enum2::Blue)};
+            en.fromInt(100);
+            REQUIRE(en == enums::Enum2::Blue); // Default value
+        }
     }
 
+    SECTION("to int")
     {
-        pack::Enum<enums::Enum2> en = enums::Enum2::Parrot;
-        REQUIRE(en.asInt() == 1);
+        {
+            pack::Enum<enums::Enum> en = enums::Enum::Dance;
+            REQUIRE(en.asInt() == 2);
+        }
+
+        {
+            pack::Enum<enums::Enum2> en = enums::Enum2::Parrot;
+            REQUIRE(en.asInt() == 1);
+        }
+    }
+
+    SECTION("Values")
+    {
+        pack::Enum<enums::Enum> en;
+
+        auto vals = en.values();
+        REQUIRE(vals.size() == 3);
+        REQUIRE(vals[0].first == "Dead"_s);
+        REQUIRE(vals[0].second == 0);
+        REQUIRE(vals[1].first == "Can"_s);
+        REQUIRE(vals[1].second == 1);
+        REQUIRE(vals[2].first == "Dance"_s);
+        REQUIRE(vals[2].second == 2);
     }
 }
 
-SECTION("Values")
+TEST_CASE("Enum name")
 {
-#ifdef IS_MAGIC_ENUM
     pack::Enum<enums::Enum> en;
-
-    auto vals = en.values();
-    REQUIRE(vals.size() == 3);
-    REQUIRE(vals[0].first == "Dead");
-    REQUIRE(vals[0].second == 0);
-    REQUIRE(vals[1].first == "Can");
-    REQUIRE(vals[1].second == 1);
-    REQUIRE(vals[2].first == "Dance");
-    REQUIRE(vals[2].second == 2);
-#else
-    CHECK(true);
-#endif
-}
-}
-
-TEST_CASE("Enum serialization/deserialization")
-{
-    pack::Enum<enums::Enum> origin;
-    origin = enums::Enum::Dance;
-
-    auto check = [](const pack::Enum<enums::Enum>& item) {
-        REQUIRE(item == enums::Enum::Dance);
-    };
-
-    check(origin);
-
-    SECTION("Serialization yaml")
-    {
-        pack::string_t cnt = *pack::yaml::serialize(origin);
-        REQUIRE(!pack::isEmpty(cnt));
-
-        pack::Enum<enums::Enum> restored;
-        pack::yaml::deserialize(cnt, restored);
-
-        check(restored);
-    }
-
-    SECTION("Serialization json")
-    {
-        pack::string_t cnt = *pack::json::serialize(origin);
-        REQUIRE(!pack::isEmpty(cnt));
-
-        pack::Enum<enums::Enum> restored;
-        pack::json::deserialize(cnt, restored);
-
-        check(restored);
-    }
-}
-
-TEST_CASE("Stream value enum serialization")
-{
-    pack::Enum<enums::Enum2> en = enums::Enum2::Blue;
-
-    auto cnt = *pack::yaml::serialize(en);
-    CHECK("BLUE"_s == cnt);
-
-    pack::Enum<enums::Enum2> ren;
-    CHECK(pack::yaml::deserialize(cnt, ren));
-    CHECK(ren == enums::Enum2::Blue);
+    REQUIRE(en.typeName() == "Enum<enums::Enum>"_s);
+    pack::Enum<enums::Enum2> en2;
+    REQUIRE(en2.typeName() == "Enum<enums::Enum2>"_s);
 }

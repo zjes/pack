@@ -19,49 +19,9 @@
 #pragma once
 
 #include "pack/types/string.h"
+#include <pack/utils.h>
 
 namespace pack {
-
-template <typename T, typename = std::enable_if_t<isSame<T, string_t>::value>>
-inline bool operator==(const String& l, const T& r)
-{
-    return l.value() == r;
-}
-
-template <typename T, typename = std::enable_if_t<isSame<T, string_t>::value>>
-inline bool operator==(const T& l, const String& r)
-{
-    return r.value() == l;
-}
-
-template <typename T, typename = std::enable_if_t<isSame<T, string_t>::value>>
-inline bool operator!=(const String& l, const T& r)
-{
-    return l.value() != r;
-}
-
-template <typename T, typename = std::enable_if_t<isSame<T, string_t>::value>>
-inline bool operator!=(const T& l, const String& r)
-{
-    return r.value() != l;
-}
-
-template <typename T, typename = std::enable_if_t<isSame<T, string_t>::value>>
-inline T operator+(const T& l, const String& r)
-{
-    return l + r.value();
-}
-
-template <typename T, typename = std::enable_if_t<isSame<T, string_t>::value>>
-inline String operator+(const String& l, const T& r)
-{
-    return l.value() + r;
-}
-
-inline bool String::empty() const
-{
-    return isEmpty(value());
-}
 
 inline int String::size() const
 {
@@ -74,14 +34,36 @@ inline std::ostream& operator<<(std::ostream& ss, const String& s)
     return ss;
 }
 
-inline void String::operator+=(const String& other)
+inline String String::operator+=(const String& other)
 {
     setValue(value() + other.value());
+    return *this;
 }
 
-inline void String::operator+=(typename String::ConstRefType other)
+inline String String::operator+=(typename String::ConstRefType other)
 {
     setValue(value() + other);
+    return *this;
 }
+
+inline String operator+(const UString& l, const String& r)
+{
+    UString str(l);
+    str += r.value();
+    return str;
+}
+
+inline String::operator UString() const
+{
+    return value();
+}
+
+#ifdef WITH_QT
+inline QDebug operator<<(QDebug debug, const String &value)
+{
+    debug << value.value();
+    return debug;
+}
+#endif
 
 } // namespace pack

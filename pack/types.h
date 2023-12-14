@@ -5,7 +5,6 @@
    | ___| |  | |  |    \
    |_|  |__,_|____|__\__\ DSO library
 
-   Copyright (C) 2020 Eaton
    Copyright (C) 2020-2022 zJes
 
    This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as
@@ -17,59 +16,28 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
+
+#include <pack/ustring.h>
 #include <sstream>
-#include <vector>
-#ifdef WITH_QTSTRING
-#include <QString>
-#else
-#include <string>
-#endif
-
-#ifdef WITH_QTSTRING
-namespace pack {
-using string_t = QString;
-}
-inline std::ostream& operator<<(std::ostream& ss, const QString& value)
-{
-    ss << qPrintable(value);
-    return ss;
-}
-inline QString operator"" _s(const char* str, std::size_t size)
-{
-    return QLatin1String(str, int(size));
-}
-#else
-namespace pack {
-using string_t = std::string;
-}
-inline std::string operator"" _s(const char* str, std::size_t size)
-{
-    return std::string(str, size);
-}
-#endif
-
-namespace pack {
 
 // =========================================================================================================================================
+
+namespace pack {
 
 /// Supported types
 enum class Type
 {
     Unknown,
     String,
-    Binary,
+    Bytes,
     Int32,
     Int64,
     UInt32,
     UInt64,
     Float,
     Double,
-    Bool,
-    UChar
+    Bool
 };
-
-string_t      valueTypeName(Type type);
-std::ostream& operator<<(std::ostream& ss, Type value);
 
 // =========================================================================================================================================
 
@@ -79,11 +47,11 @@ struct ResolveType;
 template <>
 struct ResolveType<Type::String>
 {
-    using type = string_t;
+    using type = UString;
 };
 
 template <>
-struct ResolveType<Type::Binary>
+struct ResolveType<Type::Bytes>
 {
     using type = std::vector<std::byte>;
 };
@@ -130,20 +98,20 @@ struct ResolveType<Type::Bool>
     using type = bool;
 };
 
-template <>
-struct ResolveType<Type::UChar>
-{
-    using type = unsigned char;
-};
+UString valueTypeName(Type type);
 
-inline string_t valueTypeName(Type type)
+} // namespace pack
+
+std::ostream& operator<<(std::ostream& ss, pack::Type value);
+
+inline pack::UString pack::valueTypeName(Type type)
 {
     switch (type) {
         case Type::Unknown:
             return "Unknown"_s;
         case Type::String:
             return "String"_s;
-        case Type::Binary:
+        case Type::Bytes:
             return "Binary"_s;
         case Type::Bool:
             return "Bool"_s;
@@ -155,8 +123,6 @@ inline string_t valueTypeName(Type type)
             return "Int32"_s;
         case Type::Int64:
             return "Int64"_s;
-        case Type::UChar:
-            return "UChar"_s;
         case Type::UInt32:
             return "UInt32"_s;
         case Type::UInt64:
@@ -164,11 +130,3 @@ inline string_t valueTypeName(Type type)
     }
     return "Unknown"_s;
 }
-
-inline std::ostream& operator<<(std::ostream& ss, Type value)
-{
-    ss << valueTypeName(value);
-    return ss;
-}
-
-} // namespace pack

@@ -18,9 +18,14 @@
 ========================================================================================================================================= */
 #pragma once
 #include "pack/types.h"
-#include "pack/options.h"
-
+#include <pack/options.h>
+#ifdef WITH_QT
+#include <QObject>
+#endif
 namespace pack {
+
+// =========================================================================================================================================
+
 
 // =========================================================================================================================================
 
@@ -40,22 +45,21 @@ public:
 public:
     template <typename... Args>
     Attribute(NodeType type, const Args&... args);
-    Attribute(NodeType type, const string_t& key = {});
+    Attribute(NodeType type, const UString& key = {});
     Attribute(const Attribute&) = default;
     Attribute(Attribute&&)      = default;
     virtual ~Attribute();
 
-    virtual bool     compare(const Attribute& other) const = 0;
-    virtual string_t typeName() const                      = 0;
-    virtual void     set(const Attribute& other)           = 0;
-    virtual void     set(Attribute&& other)                = 0;
-    virtual bool     hasValue() const                      = 0;
-    virtual void     clear()                               = 0;
+    virtual int     compare(const Attribute& other) const = 0;
+    virtual UString typeName() const                      = 0;
+    virtual void    set(const Attribute& other)           = 0;
+    virtual void    set(Attribute&& other)                = 0;
+    virtual bool    empty() const                         = 0;
+    virtual void    clear()                               = 0;
 
-    const string_t& key() const;
+    const UString& key() const;
 
-    bool operator==(const Attribute& other) const;
-    bool operator!=(const Attribute& other) const;
+    int operator<=>(const Attribute& other) const;
 
     Attribute& operator=(const Attribute&) = default;
     Attribute& operator=(Attribute&&)      = default;
@@ -63,7 +67,7 @@ public:
     NodeType type() const;
 
 protected:
-    string_t m_key;
+    UString  m_key;
     NodeType m_type;
 };
 

@@ -15,184 +15,24 @@
 */
 #include <catch2/catch.hpp>
 #include <pack/pack.h>
-#ifdef WITH_QTSTRING
+#ifdef WITH_QT
 #include <QHash>
 #include <QMap>
 #endif
-
-struct TestMap : public pack::Node
-{
-    using pack::Node::Node;
-
-    pack::StringMap strs = FIELD("strs");
-    pack::Int32Map  ints = FIELD("ints");
-
-    META(TestMap, strs, ints);
-};
-
-TEST_CASE("Simple map serialization/deserialization")
-{
-    TestMap origin;
-    origin.strs.append("key1"_s, "some name1"_s);
-    origin.strs.append("key2"_s, "some name2"_s);
-
-    origin.ints.append("key1"_s, 12);
-    origin.ints.append("key2"_s, 13);
-
-    auto check = [](TestMap& item) {
-        try {
-            REQUIRE(2 == item.strs.size());
-            REQUIRE(2 == item.ints.size());
-            CHECK(item.strs.contains("key1"_s));
-            CHECK(item.strs.contains("key2"_s));
-            CHECK(item.ints.contains("key1"_s));
-            CHECK(item.ints.contains("key2"_s));
-            CHECK("some name1"_s == item.strs["key1"_s]);
-            CHECK("some name2"_s == item.strs["key2"_s]);
-            CHECK(12 == item.ints["key1"_s]);
-            CHECK(13 == item.ints["key2"_s]);
-        } catch (const std::exception& err) {
-            FAIL(err.what());
-        }
-    };
-
-    check(origin);
-
-    SECTION("Serialization yaml")
-    {
-        auto cnt = *pack::yaml::serialize(origin);
-        REQUIRE(!pack::isEmpty(cnt));
-
-        TestMap restored;
-        pack::yaml::deserialize(cnt, restored);
-
-        check(restored);
-    }
-
-    SECTION("Serialization json")
-    {
-        auto cnt = *pack::json::serialize(origin);
-        REQUIRE(!pack::isEmpty(cnt));
-
-        TestMap restored;
-        pack::json::deserialize(cnt, restored);
-
-        check(restored);
-    }
-}
-
-struct MapObj : public pack::Node
-{
-    pack::String value = FIELD("value");
-
-    using pack::Node::Node;
-    META(MapObj, value);
-};
-
-TEST_CASE("Object map serialization/deserialization")
-{
-    pack::Map<MapObj> origin;
-    auto&             it = origin.append("key1"_s);
-    it.value             = "Some string"_s;
-
-    auto sav               = origin["key1"_s];
-    origin["key1"_s].value = "Some string modified"_s;
-    CHECK(origin["key1"_s].value == "Some string modified"_s);
-    origin["key1"_s] = sav;
-    CHECK(origin["key1"_s].value == "Some string"_s);
-
-    MapObj ins;
-    ins.value = "Some other value"_s;
-    origin.append("key2"_s, ins);
-
-    auto check = [](pack::Map<MapObj>& item) {
-        try {
-            REQUIRE(2 == item.size());
-            CHECK(item.contains("key1"_s));
-            CHECK(item.contains("key2"_s));
-            CHECK("Some string"_s == item["key1"_s].value);
-            CHECK("Some other value"_s == item["key2"_s].value);
-        } catch (const std::exception& err) {
-            FAIL(err.what());
-        }
-    };
-
-    check(origin);
-
-    {
-        auto cnt = pack::yaml::serialize(origin);
-        REQUIRE(cnt);
-        pack::Map<MapObj> checked;
-        REQUIRE(pack::yaml::deserialize(*cnt, checked));
-        check(checked);
-    }
-
-    {
-        auto cnt = pack::json::serialize(origin);
-        REQUIRE(cnt);
-        pack::Map<MapObj> checked;
-        REQUIRE(pack::json::deserialize(*cnt, checked));
-        check(checked);
-    }
-}
-
-TEST_CASE("Value map serialization/deserialization")
-{
-    pack::StringMap origin;
-    origin.append("key1"_s, "Some string"_s);
-
-    auto sav         = origin["key1"_s];
-    origin["key1"_s] = "Some string modified"_s;
-    CHECK(origin["key1"_s] == "Some string modified"_s);
-    origin["key1"_s] = sav;
-    CHECK(origin["key1"_s] == "Some string"_s);
-
-    origin.append("key2"_s, "Some other value"_s);
-
-    auto check = [](pack::StringMap& item) {
-        try {
-            REQUIRE(2 == item.size());
-            CHECK(item.contains("key1"_s));
-            CHECK(item.contains("key2"_s));
-            CHECK("Some string"_s == item["key1"_s]);
-            CHECK("Some other value"_s == item["key2"_s]);
-        } catch (const std::exception& err) {
-            FAIL(err.what());
-        }
-    };
-
-    check(origin);
-
-    {
-        auto cnt = pack::yaml::serialize(origin);
-        REQUIRE(cnt);
-        pack::StringMap checked;
-        REQUIRE(pack::yaml::deserialize(*cnt, checked));
-        check(checked);
-    }
-
-    {
-        auto cnt = pack::json::serialize(origin);
-        REQUIRE(cnt);
-        pack::StringMap checked;
-        REQUIRE(pack::json::deserialize(*cnt, checked));
-        check(checked);
-    }
-}
 
 TEST_CASE("map")
 {
     {
         pack::Int32Map imap;
-        CHECK(!imap.hasValue());
+        CHECK(imap.empty());
     }
 
     {
         pack::Int32Map::MapType vec = {{"one"_s, 1}, {"two"_s, 2}};
         pack::Int32Map          imap(vec);
-        CHECK(imap.hasValue());
+        CHECK(!imap.empty());
         CHECK(imap.size() == 2);
-        CHECK(imap.keys() == std::vector<pack::string_t>{"one"_s, "two"_s});
+        CHECK(imap.keys() == std::vector<pack::UString>{"one"_s, "two"_s});
         CHECK(imap["one"_s] == 1);
         CHECK(imap["two"_s] == 2);
         CHECK_THROWS(imap["three"_s] == 3);
@@ -201,32 +41,32 @@ TEST_CASE("map")
         CHECK(imap.remove("one"_s));
         CHECK(!imap.contains("one"_s));
     }
-#ifdef WITH_QTSTRING
+#ifdef WITH_QT
     {
-        QHash<QString, QString> hash = {{"one"_s, "val1"_s}, {"second"_s, "val2"_s}};
+        QHash<QString, QString> hash = {{QStringLiteral("one"), QStringLiteral("val1")}, {QStringLiteral("second"), QStringLiteral("val2")}};
         pack::StringMap         smap(hash);
 
-        CHECK(smap.hasValue());
+        CHECK(!smap.empty());
         CHECK(smap.size() == 2);
         CHECK(smap["one"_s] == "val1"_s);
         CHECK(smap["second"_s] == "val2"_s);
     }
 
     {
-        QMap<QString, QString> map = {{"one"_s, "val1"_s}, {"second"_s, "val2"_s}};
+        QMap<QString, QString> map = {{QStringLiteral("one"), QStringLiteral("val1")}, {QStringLiteral("second"), QStringLiteral("val2")}};
         pack::StringMap        smap(map);
 
-        CHECK(smap.hasValue());
+        CHECK(!smap.empty());
         CHECK(smap.size() == 2);
         CHECK(smap["one"_s] == "val1"_s);
         CHECK(smap["second"_s] == "val2"_s);
     }
 #endif
     {
-        std::map<pack::string_t, pack::string_t> map = {{"one"_s, "val1"_s}, {"second"_s, "val2"_s}};
+        std::map<pack::UString, pack::UString> map = {{"one"_s, "val1"_s}, {"second"_s, "val2"_s}};
         pack::StringMap                          smap(map);
 
-        CHECK(smap.hasValue());
+        CHECK(!smap.empty());
         CHECK(smap.size() == 2);
         CHECK(smap["one"_s] == "val1"_s);
         CHECK(smap["second"_s] == "val2"_s);

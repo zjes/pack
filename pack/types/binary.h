@@ -17,28 +17,25 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
+
 #include "pack/types.h"
 #include "pack/types/value.h"
 
 namespace pack {
 
-class Binary : public Value<Type::Binary>
+class Binary : public Value<Type::Bytes>
 {
 public:
-    using CppType      = std::vector<std::byte>;
-    using RefType      = CppType&;
-    using ConstRefType = const CppType&;
+    using Value<Type::Bytes>::Value;
+    using Value<Type::Bytes>::operator=;
 
-public:
-    using Value<Type::Binary>::Value;
-    using Value<Type::Binary>::operator=;
+    Binary();
 
-    inline static Binary fromString(const string_t& data);
+    inline static Binary fromString(const UString& data);
 
-    inline bool     empty() const;
-    inline void     setString(const string_t& data);
-    inline void     setString(const char* data, size_t size);
-    inline string_t asString() const;
+    inline void    setString(const UString& data);
+    inline void    setString(const char* data, size_t size);
+    inline UString asString() const;
 };
 
 } // namespace pack

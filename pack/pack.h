@@ -18,16 +18,14 @@
 ========================================================================================================================================= */
 #pragma once
 
-#include "pack/formatter.h"     // IWYU pragma: keep
-#include "pack/serialization.h" // IWYU pragma: keep
-#include "pack/types/binary.h"  // IWYU pragma: keep
-#include "pack/types/enum.h"    // IWYU pragma: keep
+// #include "pack/serialization.h" // IWYU pragma: keep
+#include "pack/types/binary.h" // IWYU pragma: keep
+#include "pack/types/enum.h"   // IWYU pragma: keep
 #include "pack/types/list.h"
 #include "pack/types/map.h"
-#include "pack/types/node.h" // IWYU pragma: keep
+#include "pack/types/node.h"   // IWYU pragma: keep
 #include "pack/types/string.h"
 #include "pack/types/value.h"
-#include "pack/types/variant.h" // IWYU pragma: keep
 
 namespace pack {
 
@@ -38,7 +36,6 @@ using UInt64 = NumericValue<Type::UInt64>;
 using Float  = NumericValue<Type::Float>;
 using Double = NumericValue<Type::Double>;
 using Bool   = Value<Type::Bool>;
-using UChar  = Value<Type::UChar>;
 
 // =========================================================================================================================================
 
@@ -50,7 +47,6 @@ using FloatList  = List<Float>;
 using DoubleList = List<Double>;
 using BoolList   = List<Bool>;
 using StringList = List<String>;
-using BinaryList = List<Binary>;
 
 // =========================================================================================================================================
 
@@ -62,7 +58,6 @@ using FloatMap  = Map<Float>;
 using DoubleMap = Map<Double>;
 using BoolMap   = Map<Bool>;
 using StringMap = Map<String>;
-using BinaryMap = Map<Binary>;
 
 } // namespace pack
 

@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <map>
 #include <regex>
+#include <vector>
 
 namespace pack {
 
@@ -38,11 +39,11 @@ public:
     {
     }
 
-    virtual std::vector<string_t> keys() const                   = 0;
-    virtual int                   size() const                   = 0;
-    virtual const string_t&       keyByIndex(int index) const    = 0;
-    virtual const Attribute&      get(const string_t& key) const = 0;
-    virtual Attribute&            create(const string_t& key)    = 0;
+    virtual std::vector<UString> keys() const                  = 0;
+    virtual int                  size() const                  = 0;
+    virtual const UString&       keyByIndex(int index) const   = 0;
+    virtual const Attribute&     get(const UString& key) const = 0;
+    virtual Attribute&           create(const UString& key)    = 0;
 };
 
 // =========================================================================================================================================
@@ -51,47 +52,50 @@ template <typename T>
 class Map : public IMap
 {
 public:
-    using MapType       = std::vector<std::pair<string_t, T>>;
+    using MapType       = std::vector<std::pair<UString, T>>;
     using Iterator      = typename MapType::iterator;
     using ConstIterator = typename MapType::const_iterator;
     using IsValueMap    = std::is_base_of<IValue, T>;
     using ValueType     = typename T::CppType;
 
 public:
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(const Map& value, Options&&... opts);
+    template <typename... Options>
+    Map(Map&& value, Options&&... opts)
+    requires allIsOptions<Options...>;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(Map&& value, Options&&... opts);
+    template <typename... Options>
+    Map(MapType&& value, Options&&... opts)
+    requires allIsOptions<Options...>;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(const MapType& value, Options&&... opts);
+    template <typename... Options>
+    Map(const Map& value, Options&&... opts)
+    requires allIsOptions<Options...>;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(MapType&& value, Options&&... opts);
+    template <typename... Options>
+    Map(const MapType& value, Options&&... opts)
+    requires allIsOptions<Options...>;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(Options&&... opts);
+    template <typename... Options>
+    Map(Options&&... opts)
+    requires allIsOptions<Options...>;
 
-#ifdef WITH_QTSTRING
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(QHash<QString, typename T::CppType>&& map, Options&&... opts);
+#ifdef WITH_QT
+    template <typename VT, typename... Options>
+    Map(const QHash<QString, VT>& map, Options&&... opts)
+    requires allIsOptions<Options...> && std::convertible_to<VT, typename T::CppType>;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(const QHash<QString, typename T::CppType>& map, Options&&... opts);
-
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(QMap<QString, typename T::CppType>&& map, Options&&... opts);
-
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(const QMap<QString, typename T::CppType>& map, Options&&... opts);
+    template <typename VT, typename... Options>
+    Map(const QMap<QString, VT>& map, Options&&... opts)
+    requires allIsOptions<Options...> && std::convertible_to<VT, typename T::CppType>;
 #endif
 
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(std::map<string_t, typename T::CppType>&& map, Options&&... opts);
+    template <typename... Options>
+    Map(std::map<UString, typename T::CppType>&& map, Options&&... opts)
+    requires allIsOptions<Options...>;
 
-    template <typename... Options, typename = isOptions<Options...>>
-    Map(const std::map<string_t, typename T::CppType>& map, Options&&... opts);
+    template <typename... Options>
+    Map(const std::map<UString, typename T::CppType>& map, Options&&... opts)
+    requires allIsOptions<Options...>;
 
 public:
     ConstIterator begin() const;
@@ -102,9 +106,9 @@ public:
 public:
     void setValue(const MapType& map);
     void setValue(MapType&& map);
-    void setValue(const std::map<pack::string_t, typename T::CppType>& map);
-    void setValue(std::map<pack::string_t, typename T::CppType>&& map);
-#ifdef WITH_QTSTRING
+    void setValue(const std::map<UString, typename T::CppType>& map);
+    void setValue(std::map<UString, typename T::CppType>&& map);
+#ifdef WITH_QT
     void setValue(QHash<QString, typename T::CppType>&& map);
     void setValue(const QHash<QString, typename T::CppType>& map);
     void setValue(QMap<QString, typename T::CppType>&& map);
@@ -112,32 +116,32 @@ public:
 #endif
 
 public:
-    T&   append(const string_t& key);
-    void append(const string_t& key, const T& val);
-    void append(const string_t& key, T&& val);
+    T&   append(const UString& key);
+    void append(const UString& key, const T& val);
+    void append(const UString& key, T&& val);
 
 public:
-    const T& operator[](const string_t& key) const;
-    T&       operator[](const string_t& key);
+    const T& operator[](const UString& key) const;
+    T&       operator[](const UString& key);
 
 public:
-    std::vector<string_t> keys() const override;
-    int                   size() const override;
-    const string_t&       keyByIndex(int index) const override;
-    const Attribute&      get(const string_t& key) const override;
-    Attribute&            create(const string_t& key) override;
-    bool                  contains(const string_t& key) const;
-    bool                  remove(const string_t& key);
+    std::vector<UString> keys() const override;
+    int                  size() const override;
+    const UString&       keyByIndex(int index) const override;
+    const Attribute&     get(const UString& key) const override;
+    Attribute&           create(const UString& key) override;
+    bool                 contains(const UString& key) const;
+    bool                 remove(const UString& key);
 
 public:
-    bool     compare(const Attribute& other) const override;
-    string_t typeName() const override;
-    void     set(const Attribute& other) override;
-    void     set(Attribute&& other) override;
-    bool     hasValue() const override;
-    void     clear() override;
+    int     compare(const Attribute& other) const override;
+    UString typeName() const override;
+    void    set(const Attribute& other) override;
+    void    set(Attribute&& other) override;
+    bool    empty() const override;
+    void    clear() override;
 
-    static string_t _typeName();
+    static UString _typeName();
 
 private:
     MapType m_value;

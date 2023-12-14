@@ -30,18 +30,28 @@ class String : public Value<Type::String>
 public:
     using Value<Type::String>::Value;
     using Value<Type::String>::operator=;
+    using Value<Type::String>::operator==;
+    using Value<Type::String>::operator<=>;
 
     inline friend std::ostream& operator<<(std::ostream& ss, const String& s);
 
-    inline bool empty() const;
     inline int  size() const;
+    inline operator UString() const;
 
-    void operator+=(const String& other);
-    void operator+=(typename String::ConstRefType other);
+    String operator+=(const String& other);
+    String operator+=(typename String::ConstRefType other);
+
+#ifdef WITH_QT
+    friend QDebug operator<<(QDebug debug, const String &value);
+#endif
 };
 
 // =========================================================================================================================================
 
+#ifdef WITH_QT
+QDebug operator<<(QDebug debug, const String &value);
+#endif
+
 } // namespace pack
 
-#include "pack/types/private/string.inl" // IWYU pragma: keep
+#include <pack/types/private/string.inl> // IWYU pragma: keep

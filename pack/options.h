@@ -17,8 +17,10 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
-#include "pack/convert.h"
+
 #include <any>
+#include <typeindex>
+#include <pack/convert.h>
 
 namespace pack {
 
@@ -32,70 +34,36 @@ struct FieldOption
 
 struct Key : public FieldOption
 {
-    explicit Key(const string_t& key)
+    explicit Key(const UString& key)
         : value(key)
     {
     }
 
-    string_t value;
+    UString value;
 };
 
 // =========================================================================================================================================
 
+template<typename T>
 struct Default : public FieldOption
 {
-    template <typename T>
     explicit Default(const T& def)
         : value(UseType<T>(def))
     {
     }
 
-    template <typename T>
-    T get() const
+    const T& get() const
     {
-        if (value.type() == typeid(int32_t)) {
-            return convert<T>(std::any_cast<int32_t>(value));
-        } else if (value.type() == typeid(int64_t)) {
-            return convert<T>(std::any_cast<int64_t>(value));
-        } else if (value.type() == typeid(uint32_t)) {
-            return convert<T>(std::any_cast<uint32_t>(value));
-        } else if (value.type() == typeid(uint64_t)) {
-            return convert<T>(std::any_cast<uint64_t>(value));
-        } else if (value.type() == typeid(float)) {
-            return convert<T>(std::any_cast<float>(value));
-        } else if (value.type() == typeid(double)) {
-            return convert<T>(std::any_cast<double>(value));
-        } else if (value.type() == typeid(bool)) {
-            return convert<T>(std::any_cast<bool>(value));
-        } else if (value.type() == typeid(const char*)) {
-            return convert<T>(std::any_cast<const char*>(value));
-        } else if (value.type() == typeid(string_t)) {
-            return convert<T>(std::any_cast<string_t>(value));
-        }
-        return convert<T>(std::any_cast<T>(value));
+        return value;
     }
 
-    std::any value;
+    UseType<T> value;
 };
 
 // =========================================================================================================================================
 
 template <typename... Args>
-constexpr auto allIsOptions()
-{
-    return (std::is_base_of<FieldOption, Args>::value && ...);
-}
-
-template <>
-constexpr auto allIsOptions()
-{
-    return true;
-}
-
-// =========================================================================================================================================
-
-template <typename... Options>
-using isOptions = std::enable_if_t<allIsOptions<Options...>()>;
+concept allIsOptions = (std::is_base_of_v<FieldOption, Args> && ...);
 
 // =========================================================================================================================================
 

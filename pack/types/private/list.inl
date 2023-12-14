@@ -19,29 +19,43 @@
 #pragma once
 
 #include "pack/types/list.h"
-#include <fmt/format.h>
 
 namespace pack {
 
 template <typename T>
-template <typename... Options, typename>
+List<T>::List(List<T>::ListType&& value):
+    m_value(std::move(value))
+{
+}
+
+template <typename T>
+List<T>::List(const List<T>::ListType& value):
+    m_value(value)
+{
+}
+
+template <typename T>
+template <typename... Options>
 List<T>::List(List<T>::ListType&& value, Options&&... opts)
+requires isValueConstructable<T, ListType> && allIsOptions<Options...>
     : IList(std::forward<Options>(opts)...)
     , m_value(value)
 {
 }
 
 template <typename T>
-template <typename... Options, typename>
+template <typename... Options>
 List<T>::List(std::initializer_list<T> values, Options&&... opts)
+requires isValueConstructable<T, ValueType> && allIsOptions<Options...>
     : IList(std::forward<Options>(opts)...)
     , m_value(values)
 {
 }
 
 template <typename T>
-template <typename... Options, typename>
+template <typename... Options>
 List<T>::List(Options&&... opts)
+requires allIsOptions<Options...>
     : IList(std::forward<Options>(opts)...)
 {
 }
@@ -73,15 +87,17 @@ void List<T>::setVector(typename List<T>::ListType&& list)
 }
 
 template <typename T>
-template <typename TT, typename>
+template <typename TT>
 void List<T>::setVector(std::vector<TT>&& value)
+requires isValueConstructable<TT, ValueType>
 {
     m_value = std::vector<TT>(m_value.end(), std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()));
 }
 
 template <typename T>
-template <typename TT, typename>
+template <typename TT>
 void List<T>::setVector(const std::vector<TT>& value)
+requires isValueConstructable<TT, ValueType>
 {
     m_value = std::vector<TT>(m_value.end(), value.begin(), value.end());
 }
@@ -98,7 +114,7 @@ bool List<T>::operator==(const std::vector<ValueType>& values) const
     if (m_value.size() != values.size()) {
         return false;
     }
-    for(size_t i = 0; i < m_value.size(); ++i) {
+    for (size_t i = 0; i < m_value.size(); ++i) {
         if (m_value[i] != values[i]) {
             return false;
         }
@@ -145,7 +161,7 @@ typename List<T>::Iterator List<T>::end()
 
 // Attribute
 template <typename T>
-bool List<T>::compare(const Attribute& other) const
+int List<T>::compare(const Attribute& other) const
 {
     if (auto casted = dynamic_cast<const List*>(&other)) {
         return casted->toVector() == m_value;
@@ -154,15 +170,15 @@ bool List<T>::compare(const Attribute& other) const
 }
 
 template <typename T>
-string_t List<T>::typeName() const
+UString List<T>::typeName() const
 {
     return _typeName();
 }
 
 template <typename T>
-string_t List<T>::_typeName()
+UString List<T>::_typeName()
 {
-    return fromStdString(fmt::format("List<{}>", T::typeInfo()));
+    return fmt::format("List<{}>", T::typeInfo());
 }
 
 template <typename T>
@@ -179,12 +195,6 @@ void List<T>::set(Attribute&& other)
     if (auto casted = dynamic_cast<const List*>(&other)) {
         m_value = std::move(casted->toVector());
     }
-}
-
-template <typename T>
-bool List<T>::hasValue() const
-{
-    return !m_value.empty();
 }
 
 // IList
@@ -268,15 +278,17 @@ void List<T>::append(const List::ListType& value)
 }
 
 template <typename T>
-template <typename TT, typename>
+template <typename TT>
 void List<T>::append(std::vector<TT>&& value)
+requires isValueConstructable<TT, ValueType>
 {
     m_value.insert(m_value.end(), std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()));
 }
 
 template <typename T>
-template <typename TT, typename>
+template <typename TT>
 void List<T>::append(const std::vector<TT>& value)
+requires isValueConstructable<TT, ValueType>
 {
     m_value.insert(m_value.end(), value.begin(), value.end());
 }
@@ -368,7 +380,7 @@ List<T> List<T>::sorted() const
 {
     auto copy = m_value;
     std::sort(copy.begin(), copy.end());
-    return copy;
+    return List<T>(std::move(copy));
 }
 
 template <typename T>

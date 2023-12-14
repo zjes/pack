@@ -22,24 +22,27 @@
 #include "pack/utils.h"
 #include <cassert>
 #include <cmath>
+#include <iostream>
 
 namespace pack {
 
 template <Type ValType>
-template <typename T, typename, typename... Options, typename>
+template <typename T, typename... Options>
 Value<ValType>::Value(T&& val, Options&&... opts)
+requires isValueConstructable<T, CppType> && allIsOptions<Options...>
     : Value(std::forward<Options>(opts)...)
 {
     setValue(std::forward<T>(val));
 }
 
 template <Type ValType>
-template <typename... Options, typename>
+template <typename... Options>
 Value<ValType>::Value(Options&&... opts)
+requires allIsOptions<Options...>
     : IValue(std::forward<Options>(opts)...)
 {
     if (auto ret = pickOption<Default>(opts...)) {
-        m_def = ret->template get<typename ResolveType<ValType>::type>();
+        m_def = ret->get();
         m_val = m_def;
     }
 }
@@ -94,13 +97,19 @@ template <Type ValType>
 template <typename T>
 void Value<ValType>::setValue(T&& val)
 {
-    if constexpr (isValueConstructable<T, CppType>::value) {
-        if (!compare(val)) {
+    if constexpr (isValueConstructable<T, CppType>) {
+        if (compare(val)) {
             m_val = val;
+#ifdef WITH_QTSTRING
+            emit changed();
+#endif
         }
     } else if constexpr (std::is_same_v<decltype(*this), std::decay_t<T>> || std::is_base_of_v<Value, std::decay_t<T>>) {
-        if (!compare(val.value())) {
+        if (compare(val.value())) {
             m_val = val.value();
+#ifdef WITH_QTSTRING
+            emit changed();
+#endif
         }
     } else {
         static_assert(always_false<T>, "Unsupported type");
@@ -123,37 +132,22 @@ Value<ValType>::operator ConstRefType() const
 
 template <Type ValType>
 template <typename T>
-bool Value<ValType>::operator==(const T& other) const
+int Value<ValType>::operator<=>(const T& other) const
+requires isValueConstructable<T, CppType> || std::same_as<Value, T>
 {
     return compare(other);
 }
 
 template <Type ValType>
-bool Value<ValType>::operator==(const Value& other) const
+template <typename T>
+bool Value<ValType>::operator==(const T& val) const
+requires isValueConstructable<T, CppType> || std::same_as<Value, T>
 {
-    return compare(other.value());
+    return compare(val) == 0;
 }
 
 template <Type ValType>
-bool Value<ValType>::operator==(Value<ValType>::ConstRefType val) const
-{
-    return compare(val);
-}
-
-template <Type ValType>
-bool Value<ValType>::operator!=(const Value& other) const
-{
-    return !compare(other.value());
-}
-
-template <Type ValType>
-bool Value<ValType>::operator!=(Value<ValType>::ConstRefType val) const
-{
-    return !compare(val);
-}
-
-template <Type ValType>
-bool Value<ValType>::compare(const Attribute& other) const
+int Value<ValType>::compare(const Attribute& other) const
 {
     if (auto casted = dynamic_cast<const Value<ValType>*>(&other)) {
         return compare(casted->value());
@@ -162,22 +156,19 @@ bool Value<ValType>::compare(const Attribute& other) const
 }
 
 template <Type ValType>
-bool Value<ValType>::compare(ConstRefType val) const
+int Value<ValType>::compare(ConstRefType val) const
 {
-    if constexpr (ValType == Type::Float) {
-        return std::fabs(value() - val) <= std::numeric_limits<float>::epsilon();
-    } else if constexpr (ValType == Type::Double) {
-        return std::fabs(value() - val) <= std::numeric_limits<double>::epsilon();
-    } else {
-        return value() == val;
-    }
-    return false;
+    if (value() < val)
+        return -1;
+    if (value() > val)
+        return 1;
+    return 0;
 }
 
 template <Type ValType>
-string_t Value<ValType>::typeName() const
+UString Value<ValType>::typeName() const
 {
-    return fromStdString(fmt::format("Value<{}>", valueTypeName(ValType)));
+    return format("Value<{}>"_s, valueTypeName(ValType));
 }
 
 template <Type ValType>
@@ -197,14 +188,14 @@ void Value<ValType>::set(Attribute&& other)
 }
 
 template <Type ValType>
-bool Value<ValType>::hasValue() const
+bool Value<ValType>::empty() const
 {
     if constexpr (ValType == Type::Float) {
-        return std::fabs(m_val - m_def) > std::numeric_limits<float>::epsilon();
+        return std::fabs(m_val - m_def) <= std::numeric_limits<float>::epsilon();
     } else if constexpr (ValType == Type::Double) {
-        return std::fabs(m_val - m_def) > std::numeric_limits<double>::epsilon();
+        return std::fabs(m_val - m_def) <= std::numeric_limits<double>::epsilon();
     } else {
-        return m_val != m_def;
+        return m_val == m_def;
     }
 }
 
@@ -221,7 +212,7 @@ void Value<ValType>::clear()
 }
 
 template <Type ValType>
-string_t Value<ValType>::typeInfo()
+UString Value<ValType>::typeInfo()
 {
     return valueTypeName(ValType);
 }

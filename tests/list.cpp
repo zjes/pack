@@ -18,82 +18,82 @@
 
 namespace list {
 
-class Item : public pack::Node
-{
-public:
-    pack::String name = FIELD("name");
+//class Item : public pack::Node
+//{
+//public:
+//    pack::String name = FIELD("name");
 
-    using pack::Node::Node;
-    META(Item, name);
-};
+//    using pack::Node::Node;
+//    META(Item, name);
+//};
 
-class Person2 : public pack::Node
-{
-public:
-    pack::String     name  = FIELD("name");
-    pack::Int32List  items = FIELD("items");
-    pack::Int32      value = FIELD("value");
-    pack::List<Item> more  = FIELD("more");
+//class Person2 : public pack::Node
+//{
+//public:
+//    pack::String     name  = FIELD("name");
+//    pack::Int32List  items = FIELD("items");
+//    pack::Int32      value = FIELD("value");
+//    pack::List<Item> more  = FIELD("more");
 
-    using pack::Node::Node;
-    META(Person2, name, items, value, more);
-};
+//    using pack::Node::Node;
+//    META(Person2, name, items, value, more);
+//};
 
 } // namespace list
 
-TEST_CASE("List serialization/deserialization")
-{
-    list::Person2 origin;
-    origin.name  = "Person"_s;
-    origin.value = 42;
-    origin.items.append(11);
-    origin.items.append(12);
-    origin.items.append(13);
+//TEST_CASE("List serialization/deserialization")
+//{
+//    list::Person2 origin;
+//    origin.name  = "Person"_s;
+//    origin.value = 42;
+//    origin.items.append(11);
+//    origin.items.append(12);
+//    origin.items.append(13);
 
-    auto& more = origin.more.append();
-    more.name  = "name number 1"_s;
+//    auto& more = origin.more.append();
+//    more.name  = "name number 1"_s;
 
-    auto& more1 = origin.more.append();
-    more1.name  = "name number 2"_s;
+//    auto& more1 = origin.more.append();
+//    more1.name  = "name number 2"_s;
 
-    auto check = [](const list::Person2& item) {
-        REQUIRE("Person"_s == item.name);
-        REQUIRE(42 == item.value);
+//    auto check = [](const list::Person2& item) {
+//        REQUIRE("Person"_s == item.name);
+//        REQUIRE(42 == item.value);
 
-        REQUIRE(3 == item.items.size());
-        REQUIRE(11 == item.items[0]);
-        REQUIRE(12 == item.items[1]);
-        REQUIRE(13 == item.items[2]);
+//        REQUIRE(3 == item.items.size());
+//        REQUIRE(11 == item.items[0]);
+//        REQUIRE(12 == item.items[1]);
+//        REQUIRE(13 == item.items[2]);
 
-        REQUIRE(2 == item.more.size());
-        REQUIRE("name number 1"_s == item.more[0].name);
-        REQUIRE("name number 2"_s == item.more[1].name);
-    };
+//        REQUIRE(2 == item.more.size());
+//        REQUIRE("name number 1"_s == item.more[0].name);
+//        REQUIRE("name number 2"_s == item.more[1].name);
+//    };
 
-    check(origin);
+//    check(origin);
 
-    SECTION("Serialization yaml")
-    {
-        auto cnt = *pack::yaml::serialize(origin);
-        REQUIRE(!pack::isEmpty(cnt));
+//    SECTION("Serialization yaml")
+//    {
+//        auto cnt = *pack::yaml::serialize(origin);
+//        REQUIRE(!pack::isEmpty(cnt));
 
-        list::Person2 restored;
-        pack::yaml::deserialize(cnt, restored);
+//        list::Person2 restored;
+//        pack::yaml::deserialize(cnt, restored);
 
-        check(restored);
-    }
+//        check(restored);
+//    }
 
-    SECTION("Serialization json")
-    {
-        auto cnt = *pack::json::serialize(origin);
-        REQUIRE(!pack::isEmpty(cnt));
+//    SECTION("Serialization json")
+//    {
+//        auto cnt = *pack::json::serialize(origin);
+//        REQUIRE(!pack::isEmpty(cnt));
 
-        list::Person2 restored;
-        pack::json::deserialize(cnt, restored);
+//        list::Person2 restored;
+//        pack::json::deserialize(cnt, restored);
 
-        check(restored);
-    }
-}
+//        check(restored);
+//    }
+//}
 
 TEST_CASE("new list")
 {

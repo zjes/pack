@@ -25,91 +25,86 @@ namespace pack {
 // =========================================================================================================================================
 
 template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(const Map& value, Options&&... opts)
-    : IMap(std::forward<Options>(opts)...)
-{
-    setValue(value.m_value);
-}
-
-template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(Map&& value, Options&&... opts)
+template <typename... Options>
+Map<T>::Map(Map<T>&& value, Options&&... opts)
+requires allIsOptions<Options...>
     : IMap(std::forward<Options>(opts)...)
 {
     setValue(std::move(value.m_value));
 }
 
 template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(const MapType& value, Options&&... opts)
-    : IMap(std::forward<Options>(opts)...)
-{
-    setValue(value);
-}
-
-template <typename T>
-template <typename... Options, typename>
+template <typename... Options>
 Map<T>::Map(MapType&& value, Options&&... opts)
+requires allIsOptions<Options...>
     : IMap(std::forward<Options>(opts)...)
 {
     setValue(std::move(value));
 }
 
 template <typename T>
-template <typename... Options, typename>
+template <typename... Options>
+Map<T>::Map(const Map<T>& value, Options&&... opts)
+requires allIsOptions<Options...>
+    : IMap(std::forward<Options>(opts)...)
+{
+    setValue(value.m_value);
+}
+
+template <typename T>
+template <typename... Options>
+Map<T>::Map(const MapType& value, Options&&... opts)
+requires allIsOptions<Options...>
+    : IMap(std::forward<Options>(opts)...)
+{
+    setValue(value);
+}
+
+template <typename T>
+template <typename... Options>
 Map<T>::Map(Options&&... opts)
+requires allIsOptions<Options...>
     : IMap(std::forward<Options>(opts)...)
 {
 }
 
-#ifdef WITH_QTSTRING
+#ifdef WITH_QT
 
 template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(QHash<QString, typename T::CppType>&& map, Options&&... opts)
-    : IMap(std::forward<Options>(opts)...)
+template <typename VT, typename... Options>
+Map<T>::Map(const QHash<QString, VT>& map, Options&&... opts)
+requires allIsOptions<Options...> && std::convertible_to<VT, typename T::CppType>
 {
-    setValue(std::move(map));
+    for(const auto& [key, value] : map.asKeyValueRange()) {
+        append(convert<UString>(key), convert<typename T::CppType>(value));
+    }
 }
 
 template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(const QHash<QString, typename T::CppType>& map, Options&&... opts)
-    : IMap(std::forward<Options>(opts)...)
+template <typename VT, typename... Options>
+Map<T>::Map(const QMap<QString, VT>& map, Options&&... opts)
+requires allIsOptions<Options...> && std::convertible_to<VT, typename T::CppType>
 {
-    setValue(map);
-}
-
-template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(QMap<QString, typename T::CppType>&& map, Options&&... opts)
-    : IMap(std::forward<Options>(opts)...)
-{
-    setValue(std::move(map));
-}
-
-template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(const QMap<QString, typename T::CppType>& map, Options&&... opts)
-    : IMap(std::forward<Options>(opts)...)
-{
-    setValue(map);
+    for(const auto& [key, value] : map.asKeyValueRange()) {
+        append(convert<UString>(key), convert<typename T::CppType>(value));
+    }
 }
 
 #endif
 
 template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(std::map<string_t, typename T::CppType>&& map, Options&&... opts)
+template <typename... Options>
+Map<T>::Map(std::map<UString, typename T::CppType>&& map, Options&&... opts)
+requires allIsOptions<Options...>
     : IMap(std::forward<Options>(opts)...)
 {
     setValue(std::move(map));
 }
 
 template <typename T>
-template <typename... Options, typename>
-Map<T>::Map(const std::map<string_t, typename T::CppType>& map, Options&&... opts)
+template <typename... Options>
+Map<T>::Map(const std::map<UString, typename T::CppType>& map, Options&&... opts)
+requires allIsOptions<Options...>
     : IMap(std::forward<Options>(opts)...)
 {
     setValue(map);
@@ -156,7 +151,7 @@ void Map<T>::setValue(MapType&& map)
 }
 
 template <typename T>
-void Map<T>::setValue(const std::map<pack::string_t, typename T::CppType>& map)
+void Map<T>::setValue(const std::map<pack::UString, typename T::CppType>& map)
 {
     m_value.clear();
     for (const auto& [key, value] : map) {
@@ -165,7 +160,7 @@ void Map<T>::setValue(const std::map<pack::string_t, typename T::CppType>& map)
 }
 
 template <typename T>
-void Map<T>::setValue(std::map<pack::string_t, typename T::CppType>&& map)
+void Map<T>::setValue(std::map<pack::UString, typename T::CppType>&& map)
 {
     m_value.clear();
     for (const auto& [key, value] : map) {
@@ -173,7 +168,7 @@ void Map<T>::setValue(std::map<pack::string_t, typename T::CppType>&& map)
     }
 }
 
-#ifdef WITH_QTSTRING
+#ifdef WITH_QT
 template <typename T>
 void Map<T>::setValue(const QHash<QString, typename T::CppType>& map)
 {
@@ -215,9 +210,9 @@ void Map<T>::setValue(QMap<QString, typename T::CppType>&& map)
 // =========================================================================================================================================
 
 template <typename T>
-std::vector<string_t> Map<T>::keys() const
+std::vector<UString> Map<T>::keys() const
 {
-    std::vector<string_t> keys;
+    std::vector<UString> keys;
     for (const auto& [key, _] : m_value) {
         keys.push_back(key);
     }
@@ -232,7 +227,7 @@ int Map<T>::size() const
 }
 
 template <typename T>
-const string_t& Map<T>::keyByIndex(int index) const
+const UString& Map<T>::keyByIndex(int index) const
 {
     if (index < 0 || index >= int(m_value.size())) {
         throw std::out_of_range(fmt::format("Index '{}' was not found", index));
@@ -241,7 +236,7 @@ const string_t& Map<T>::keyByIndex(int index) const
 }
 
 template <typename T>
-const Attribute& Map<T>::get(const string_t& key) const
+const Attribute& Map<T>::get(const UString& key) const
 {
     auto found = std::find_if(m_value.begin(), m_value.end(), [&](const auto& pair) {
         return pair.first == key;
@@ -255,13 +250,13 @@ const Attribute& Map<T>::get(const string_t& key) const
 }
 
 template <typename T>
-Attribute& Map<T>::create(const string_t& key)
+Attribute& Map<T>::create(const UString& key)
 {
     return append(key);
 }
 
 template <typename T>
-bool Map<T>::contains(const string_t& key) const
+bool Map<T>::contains(const UString& key) const
 {
     auto found = std::find_if(m_value.begin(), m_value.end(), [&](const auto& pair) {
         return pair.first == key;
@@ -270,7 +265,7 @@ bool Map<T>::contains(const string_t& key) const
 }
 
 template <typename T>
-bool Map<T>::remove(const string_t& key)
+bool Map<T>::remove(const UString& key)
 {
     auto found = std::find_if(m_value.begin(), m_value.end(), [&](const auto& pair) {
         return pair.first == key;
@@ -286,20 +281,20 @@ bool Map<T>::remove(const string_t& key)
 // =========================================================================================================================================
 
 template <typename T>
-T& Map<T>::append(const string_t& key)
+T& Map<T>::append(const UString& key)
 {
     m_value.emplace_back(key, std::move(T{}));
     return m_value.back().second;
 }
 
 template <typename T>
-void Map<T>::append(const string_t& key, const T& val)
+void Map<T>::append(const UString& key, const T& val)
 {
     m_value.emplace_back(key, val);
 }
 
 template <typename T>
-void Map<T>::append(const string_t& key, T&& val)
+void Map<T>::append(const UString& key, T&& val)
 {
     m_value.emplace_back(key, std::move(val));
 }
@@ -307,16 +302,16 @@ void Map<T>::append(const string_t& key, T&& val)
 // =========================================================================================================================================
 
 template <typename T>
-bool Map<T>::compare(const Attribute& other) const
+int Map<T>::compare(const Attribute& other) const
 {
     if (auto casted = dynamic_cast<const Map*>(&other)) {
-        return casted->m_value == m_value;
+        return casted->m_value == m_value ? 0 : 1;
     }
-    return false;
+    return -1;
 }
 
 template <typename T>
-string_t Map<T>::typeName() const
+UString Map<T>::typeName() const
 {
     return _typeName();
 }
@@ -338,9 +333,9 @@ void Map<T>::set(Attribute&& other)
 }
 
 template <typename T>
-bool Map<T>::hasValue() const
+bool Map<T>::empty() const
 {
-    return !m_value.empty();
+    return m_value.empty();
 }
 
 template <typename T>
@@ -350,15 +345,15 @@ void Map<T>::clear()
 }
 
 template <typename T>
-string_t Map<T>::_typeName()
+UString Map<T>::_typeName()
 {
-    return fromStdString(fmt::format("Map<{}>", T::typeInfo()));
+    return pack::format("Map<{}>"_s, T::typeInfo());
 }
 
 // =========================================================================================================================================
 
 template <typename T>
-const T& Map<T>::operator[](const string_t& key) const
+const T& Map<T>::operator[](const UString& key) const
 {
     auto it = std::find_if(m_value.begin(), m_value.end(), [&key](const auto& pair) {
         return pair.first == key;
@@ -371,7 +366,7 @@ const T& Map<T>::operator[](const string_t& key) const
 }
 
 template <typename T>
-T& Map<T>::operator[](const string_t& key)
+T& Map<T>::operator[](const UString& key)
 {
     auto it = std::find_if(m_value.begin(), m_value.end(), [&key](const auto& pair) {
         return pair.first == key;

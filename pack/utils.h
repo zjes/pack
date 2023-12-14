@@ -5,25 +5,22 @@
    | ___| |  | |  |    \
    |_|  |__,_|____|__\__\ DSO library
 
-   Copyright (C) 2020 Eaton
-   Copyright (C) 2020-2022 zJes
+Copyright (C) 2020-2022 zJes
 
-   This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as
-   published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
-   This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as
+published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
 
-#include "pack/types.h"
-#include <algorithm>
 #include <fmt/format.h>
+#include <pack/types.h>
 #include <string>
-#include <type_traits>
-#ifdef WITH_QSTRING
+#ifdef WITH_QT
 #include <QString>
 #endif
 
@@ -40,13 +37,13 @@ struct Types
 template <size_t N>
 struct Types<char[N]>
 {
-    using Type = pack::string_t;
+    using Type = UString;
 };
 
 template <>
 struct Types<const char*>
 {
-    using Type = pack::string_t;
+    using Type = UString;
 };
 
 // =========================================================================================================================================
@@ -57,12 +54,12 @@ using UseType = typename Types<T>::Type;
 // =========================================================================================================================================
 
 template <typename CppType, typename T>
-using isSame = std::is_same<UseType<std::decay_t<T>>, CppType>;
+concept isSame = std::same_as<UseType<T>, CppType>;
 
 // =========================================================================================================================================
 
-template <typename CppType, typename T>
-using isConvertable = std::is_convertible<UseType<std::decay_t<T>>, CppType>;
+template <typename T, typename CppType>
+concept isConvertable = std::convertible_to<UseType<T>, CppType>;
 
 // =========================================================================================================================================
 
@@ -71,59 +68,23 @@ constexpr std::false_type always_false{};
 
 // =========================================================================================================================================
 
-#define ENABLE_FLAGS(EnumType)                                                                                                             \
-    constexpr EnumType operator~(EnumType rhs) noexcept                                                                                    \
-    {                                                                                                                                      \
-        return static_cast<EnumType>(~static_cast<std::underlying_type_t<EnumType>>(rhs));                                                 \
-    }                                                                                                                                      \
-    constexpr auto operator|(EnumType lhs, EnumType rhs) noexcept                                                                          \
-    {                                                                                                                                      \
-        return static_cast<EnumType>(                                                                                                      \
-            static_cast<std::underlying_type_t<EnumType>>(lhs) | static_cast<std::underlying_type_t<EnumType>>(rhs));                      \
-    }                                                                                                                                      \
-    constexpr auto operator&(EnumType lhs, EnumType rhs) noexcept                                                                          \
-    {                                                                                                                                      \
-        return static_cast<EnumType>(                                                                                                      \
-            static_cast<std::underlying_type_t<EnumType>>(lhs) & static_cast<std::underlying_type_t<EnumType>>(rhs));                      \
-    }                                                                                                                                      \
-    constexpr auto operator^(EnumType lhs, EnumType rhs) noexcept                                                                          \
-    {                                                                                                                                      \
-        return static_cast<EnumType>(                                                                                                      \
-            static_cast<std::underlying_type_t<EnumType>>(lhs) ^ static_cast<std::underlying_type_t<EnumType>>(rhs));                      \
-    }                                                                                                                                      \
-    constexpr auto operator|=(EnumType& lhs, EnumType rhs) noexcept                                                                        \
-    {                                                                                                                                      \
-        return lhs = lhs | rhs;                                                                                                            \
-    }                                                                                                                                      \
-    constexpr auto operator&=(EnumType& lhs, EnumType rhs) noexcept                                                                        \
-    {                                                                                                                                      \
-        return lhs = lhs & rhs;                                                                                                            \
-    }                                                                                                                                      \
-    constexpr auto operator^=(EnumType& lhs, EnumType rhs) noexcept                                                                        \
-    {                                                                                                                                      \
-        return lhs = lhs ^ rhs;                                                                                                            \
-    }
+template <typename T>
+concept enumerable = std::is_enum<T>::value;
 
 template <typename T>
-bool isSet(T flag, T option)
-{
-    return std::underlying_type_t<T>(flag & option);
-}
+concept enumerableToStream = enumerable<T> && requires(std::ostream os, T value) {
+    {
+        os << value
+    };
+};
+
+template <typename T>
+concept enumerableFromStream = enumerable<T> && requires(std::istream os, T value) {
+    {
+        os >> value
+    };
+};
 
 // =========================================================================================================================================
-
-std::string toStdString(const pack::string_t& str);
-#ifdef WITH_QTSTRING
-std::string toStdString(const QByteArray& str);
-#endif
-pack::string_t fromStdString(const std::string& str);
-std::string    tolower(const std::string& src);
-
-// =========================================================================================================================================
-
-bool isEmpty(const pack::string_t& str);
-#ifdef WITH_QTSTRING
-bool isEmpty(const QByteArray& str);
-#endif
 
 } // namespace pack

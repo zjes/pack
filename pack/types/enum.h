@@ -19,7 +19,6 @@
 #pragma once
 
 #include "pack/attribute.h"
-#include "pack/expected.h"
 
 namespace pack {
 
@@ -29,26 +28,27 @@ namespace pack {
 class IEnum : public Attribute
 {
 public:
-    using Values = std::vector<std::pair<std::string, int>>;
+    using Values = std::vector<std::pair<UString, int>>;
 
-    template <typename... Options, typename = isOptions<Options...>>
+    template <typename... Options>
     explicit IEnum(Options&&... args)
+    requires allIsOptions<Options...>
         : Attribute(NodeType::Enum, std::forward<Options>(args)...)
     {
     }
 
 public:
     /// Returns a string representation of the enum value
-    virtual string_t asString() const = 0;
+    virtual UString asString() const = 0;
 
     /// Sets enum value from string
-    virtual Expected<void> fromString(const string_t& value) = 0;
+    virtual void fromString(const UString& value) = 0;
 
     /// Returns a string representation of the enum value
     virtual int asInt() const = 0;
 
     /// Sets enum value from string
-    virtual Expected<void> fromInt(int value) = 0;
+    virtual void fromInt(int value) = 0;
 
     /// Return values map for Name -> int pairs
     virtual Values values() const = 0;
@@ -61,18 +61,21 @@ class Enum : public IEnum
 {
 public:
     using IEnum::IEnum;
+    using Default = Default<T>;
 
 public:
     /// ctor. Initialize enum with value and options
     /// @param value value to initialize
     /// @param opts options
-    template <typename... Options, typename = isOptions<Options...>>
-    Enum(const T& value, Options&&... opts);
+    template <typename... Options>
+    Enum(const T& value, Options&&... opts)
+    requires allIsOptions<Options...>;
 
     /// ctor. Initialize enun with  options
     /// @param opts options
-    template <typename... Options, typename = isOptions<Options...>>
-    Enum(Options&&... opts);
+    template <typename... Options>
+    Enum(Options&&... opts)
+    requires allIsOptions<Options...>;
 
     Enum(const Enum& other) = default;
     Enum(Enum&& other)      = default;
@@ -91,17 +94,17 @@ public:
     /// Sets the value
     /// @param val value to set
     template <typename Value>
-    Expected<void> setValue(Value&& val);
+    void setValue(Value&& val);
 
     /// Assigmen operator
     Enum& operator=(const T& val);
 
 public:
     /// Compares enums
-    bool compare(const Attribute& other) const override;
+    int compare(const Attribute& other) const override;
 
     /// Returns type name enum<T>
-    string_t typeName() const override;
+    UString typeName() const override;
 
     /// Return values map for Name -> int pairs
     Values values() const override;
@@ -113,26 +116,25 @@ public:
     void set(Attribute&& other) override;
 
     /// Returns true if enum has value
-    bool hasValue() const override;
+    bool empty() const override;
 
     /// Clears enum value
     void clear() override;
 
     /// Returns enum value as string representation
-    string_t asString() const override;
+    UString asString() const override;
 
     /// Sets enum value from string
-    Expected<void> fromString(const string_t& value) override;
+    void fromString(const UString& value) override;
 
     /// Returns enum as int representation
     int asInt() const override;
 
     /// Sets enum value from int
-    Expected<void> fromInt(int value) override;
+    void fromInt(int value) override;
 
 private:
-    static string_t asString(const T& value);
-    void            _setValue(T value);
+    void _setValue(T value);
 
 protected:
     T m_value = {};

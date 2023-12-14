@@ -18,47 +18,10 @@
 ========================================================================================================================================= */
 #pragma once
 
+#include "pack/convert.h"
 #include "pack/types/enum.h"
-#include <sstream>
-
-#if defined(__clang__) && __clang_major__ >= 5 || defined(__GNUC__) && __GNUC__ >= 9
-#define IS_MAGIC_ENUM
-#include "pack/magic-enum.h"
-#endif
 
 namespace pack {
-// =========================================================================================================================================
-// Traits helpers
-// =========================================================================================================================================
-
-namespace details {
-
-    template <typename StreamT, typename EnumT>
-    struct canToStream
-    {
-        template <typename S, typename T>
-        static auto test(int) -> decltype(std::declval<S&>() << std::declval<T>(), std::true_type());
-
-        template <typename, typename>
-        static auto test(...) -> std::false_type;
-
-        static const bool value = decltype(test<StreamT, EnumT>(0))::value;
-    };
-
-    template <typename StreamT, typename EnumT>
-    struct canFromStream
-    {
-        template <typename S, typename T>
-        static auto test(int) -> decltype(std::declval<S&>() >> std::declval<T&>(), std::true_type());
-
-        template <typename, typename>
-        static auto test(...) -> std::false_type;
-
-        static const bool value = decltype(test<StreamT, EnumT>(0))::value;
-    };
-
-} // namespace details
-
 // =========================================================================================================================================
 // Enum implementation
 // =========================================================================================================================================
@@ -70,21 +33,23 @@ Enum<T>::Enum()
 }
 
 template <typename T>
-template <typename... Options, typename>
+template <typename... Options>
 Enum<T>::Enum(const T& value, Options&&... opts)
+requires allIsOptions<Options...>
     : Enum(std::forward<Options>(opts)...)
 {
     setValue(value);
 }
 
 template <typename T>
-template <typename... Options, typename>
+template <typename... Options>
 Enum<T>::Enum(Options&&... opts)
+requires allIsOptions<Options...>
     : IEnum(std::forward<Options>(opts)...)
 {
     if (auto ret = pickOption<Default>(opts...)) {
-        m_def   = std::any_cast<const T&>(ret->value);
-        m_value = std::any_cast<const T&>(ret->value);
+        m_def   = ret->get();
+        m_value = m_def;
     }
 }
 
@@ -115,61 +80,43 @@ Enum<T>& Enum<T>::operator=(const T& val)
 
 template <typename T>
 template <typename Value>
-Expected<void> Enum<T>::setValue(Value&& val)
+void Enum<T>::setValue(Value&& val)
 {
-    if constexpr (std::is_same_v<std::decay_t<Value>, T>) {
-        _setValue(std::forward<Value>(val));
-        return {};
-    } else if constexpr (std::is_same_v<UseType<Value>, string_t>) {
-        return fromString(std::forward<Value>(val));
-    } else if constexpr (std::is_integral_v<Value>) {
-        return fromInt(std::forward<Value>(val));
+    if constexpr(std::same_as<T, std::decay_t<Value>>) {
+        _setValue(val);
+    } else if constexpr(canConvert<T, Value>) {
+        _setValue(convert<T>(val, m_def));
     } else {
         static_assert(always_false<Value>, "Unsupported type");
     }
 }
 
 template <typename T>
-bool Enum<T>::compare(const Attribute& other) const
+int Enum<T>::compare(const Attribute& other) const
 {
     if (auto casted = dynamic_cast<const Enum<T>*>(&other)) {
-        return casted->value() == value();
+        if (value() < casted->value())
+            return -1;
+        if (value() > casted->value())
+            return 1;
+        return 0;
     }
-    return false;
+    return -1;
 }
 
 template <typename T>
-string_t Enum<T>::typeName() const
+UString Enum<T>::typeName() const
 {
-    return "Enum"_s;
-}
-
-template <typename T>
-string_t Enum<T>::asString(const T& value)
-{
-    if constexpr (details::canToStream<std::stringstream, T>::value) {
-        std::stringstream ss;
-        ss << value;
-        return fromStdString(ss.str());
-    } else if constexpr (!details::canToStream<std::stringstream, T>::value) {
-#ifdef IS_MAGIC_ENUM
-        return fromStdString(magic_enum::enum_name(value).data());
-#else
-        // static_assert (false, "Cannot serialize enum, lacked stream oprator <<");
-        return {};
-#endif
-    }
+    return format("Enum<{}>"_s, magic_enum::enum_type_name<T>());
 }
 
 template <typename T>
 IEnum::Values Enum<T>::values() const
 {
     IEnum::Values ret;
-#ifdef IS_MAGIC_ENUM
     for (const auto& [val, name] : magic_enum::enum_entries<T>()) {
-        ret.emplace_back(name, int(val));
+        ret.emplace_back(std::string{name}, int(val));
     }
-#endif
     return ret;
 }
 
@@ -190,46 +137,21 @@ void Enum<T>::set(Attribute&& other)
 }
 
 template <typename T>
-bool Enum<T>::hasValue() const
+bool Enum<T>::empty() const
 {
-    return m_value != m_def;
+    return m_value == m_def;
 }
 
 template <typename T>
-string_t Enum<T>::asString() const
+UString Enum<T>::asString() const
 {
-    return asString(value());
+    return convert<UString>(value());
 }
 
 template <typename T>
-Expected<void> Enum<T>::fromString(const string_t& value)
+void Enum<T>::fromString(const UString& value)
 {
-    if constexpr (details::canFromStream<std::stringstream, T>::value) {
-        try {
-            T val;
-
-            std::stringstream ss;
-            ss << value;
-            ss >> val;
-
-            _setValue(val);
-        } catch (const std::exception&) {
-            return unexpected("Wrong conversion from string"_s);
-        }
-    } else if constexpr (!details::canFromStream<std::stringstream, T>::value) {
-#ifdef IS_MAGIC_ENUM
-        if (auto re = magic_enum::enum_cast<T>(toStdString(value)); re) {
-            _setValue(re.value());
-        } else {
-            return unexpected("Wrong conversion from string"_s);
-        }
-#else
-        static_assert(fty::always_false<T>, "Unsupported conversion");
-#endif
-    } else {
-        static_assert(always_false<T>, "Unsupported conversion");
-    }
-    return {};
+    _setValue(convert<T>(value, m_def));
 }
 
 template <typename T>
@@ -239,18 +161,9 @@ int Enum<T>::asInt() const
 }
 
 template <typename T>
-Expected<void> Enum<T>::fromInt(int value)
+void Enum<T>::fromInt(int value)
 {
-#ifdef IS_MAGIC_ENUM
-    if (auto ret = magic_enum::enum_cast<T>(value); ret) {
-        _setValue(*ret);
-    } else {
-        return unexpected("Wrong conversion from string"_s);
-    }
-#else
-    setValue(static_cast<T>(value));
-#endif
-    return {};
+    _setValue(convert<T>(value, m_def));
 }
 
 template <typename T>
@@ -269,4 +182,4 @@ void Enum<T>::_setValue(T val)
 
 // =========================================================================================================================================
 
-}
+} // namespace pack
