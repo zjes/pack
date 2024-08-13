@@ -1,8 +1,8 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <iostream>
 #include <pack/pack.h>
 
-namespace item {
+namespace {
 
 struct Item : public pack::Node
 {
@@ -10,7 +10,7 @@ struct Item : public pack::Node
     META(Item, item);
 };
 
-} // namespace item
+} // namespace
 
 TEST_CASE("simple node")
 {
@@ -28,11 +28,11 @@ TEST_CASE("simple node")
         META_BASE(Up, Person, work);
     };
 
-    struct UpItem : public item::Item
+    struct UpItem : public Item
     {
         pack::String work = FIELD("work");
 
-        META_BASE(UpItem, item::Item, work);
+        META_BASE(UpItem, Item, work);
     };
 
     Person p;
@@ -46,11 +46,10 @@ TEST_CASE("simple node")
     u.name = "u name"_s;
     u.work = "u work"_s;
 
-    auto fieldCompare = [](const std::vector<pack::UString>& from, const std::vector<pack::UString>& to)
-    {
+    auto fieldCompare = [](const std::vector<pack::UString>& from, const std::vector<pack::UString>& to) {
         REQUIRE(from.size() == to.size());
 
-        for (int i = 0; i < from.size(); ++i) {
+        for (size_t i = 0; i < from.size(); ++i) {
             CHECK(from[i] == to[i]);
         }
     };
@@ -62,17 +61,10 @@ TEST_CASE("simple node")
         std::cerr << "dn " << field->key() << std::endl;
     }
 
-    Up u1 = u;
-    std::cerr << "copy " << u1.name << " " << u1.work << std::endl;
-
-    std::cerr << "cmp1 " << (u1 == u) << std::endl;
-
+    Up u1   = u;
     u1.name = "different"_s;
-
-    std::cerr << "cmp2 " << (u1 == u) << std::endl;
 
     UpItem ui;
     ui.item = "aaaa"_s;
     ui.work = "wwww"_s;
-    std::cerr << "ui " << ui.item << " " << ui.work << std::endl;
 }

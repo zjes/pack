@@ -1,49 +1,57 @@
 #include "pack/serialization.h"
-#ifdef WITH_QT
-#include <QFile>
-#endif
+#include "providers/json.h"
+#include "providers/yaml.h"
 #include <fstream>
 
 namespace pack {
 
 static expected<UString> read(const UString& filename)
 {
-#ifdef WITH_QT
-    QFile file(filename.toQString());
-    if (file.open(QIODevice::ReadOnly)) {
-        return UString(QString::fromUtf8(file.readAll()));
-    }
-#else
     std::ifstream st(filename.toStdString());
     if (st.is_open()) {
         return UString(std::string{std::istreambuf_iterator<char>(st), std::istreambuf_iterator<char>()});
     }
-#endif
-    return unexpected("Cannot read file {}"_s, filename);
+    return unexpected(std::format("Cannot read file {}", filename));
 }
 
 static expected<void> write(const UString& filename, const UString& content)
 {
-#ifdef WITH_QT
     std::ofstream st(filename.toStdString());
-#else
-    std::ofstream st(filename.toStdString());
-#endif
     if (st.is_open()) {
-        st << content;
+        st << content.toStdString();
         st.close();
         return {};
     }
-    return unexpected("Cannot read file {}"_s, filename);
+    return unexpected(std::format("Cannot read file {}", filename));
 }
 
-
-expected<UString> serialize(Serializers serializer, const Attribute& node, Option opt)
+class Serialization
 {
-    return unexpected("Unimplemented"_s);
+public:
+    template <typename T>
+    static expected<UString> serialize(const Attribute& node, Option opt)
+    {
+        return T().run(node, opt);
+    }
+    template <typename T>
+    static expected<void> deserialize(Attribute& node, const UString& content)
+    {
+        return T().run(node, content);
+    }
+};
+
+expected<UString> serialize(Serializer serializer, const Attribute& node, Option opt)
+{
+    switch (serializer) {
+        case Serializer::Json:
+            return Serialization::serialize<JsonSerialization>(node, opt);
+        case Serializer::Yaml:
+            return Serialization::serialize<YamlSerialization>(node, opt);
+    }
+    return unexpected(format("Unimplemented type: {}"_s, convert<UString>(serializer)));
 }
 
-expected<void> serializeFile(Serializers serializer, const UString& fileName, const Attribute& node, Option opt)
+expected<void> serializeFile(Serializer serializer, const UString& fileName, const Attribute& node, Option opt)
 {
     if (auto content = serialize(serializer, node, opt)) {
         return write(fileName, *content);
@@ -52,12 +60,18 @@ expected<void> serializeFile(Serializers serializer, const UString& fileName, co
     }
 }
 
-expected<void> deserialize(Serializers serializer, const UString& content, Attribute& node)
+expected<void> deserialize(Serializer serializer, const UString& content, Attribute& node)
 {
-    return unexpected("Unimplemented"_s);
+    switch (serializer) {
+        case Serializer::Json:
+            return Serialization::deserialize<JsonDeserialization>(node, content);
+        case Serializer::Yaml:
+            return Serialization::deserialize<YamlDeserialization>(node, content);
+    }
+    return unexpected(format("Unimplemented type: {}"_s, convert<UString>(serializer)));
 }
 
-expected<void> deserializeFile(Serializers serializer, const UString& fileName, Attribute& node)
+expected<void> deserializeFile(Serializer serializer, const UString& fileName, Attribute& node)
 {
     if (auto content = read(fileName)) {
         return deserialize(serializer, *content, node);
@@ -65,49 +79,5 @@ expected<void> deserializeFile(Serializers serializer, const UString& fileName, 
         return unexpected(content.error());
     }
 }
-
-namespace json {
-    expected<UString> serialize(const Attribute& node, Option opt)
-    {
-        return pack::serialize(Serializers::Json, node, opt);
-    }
-
-    expected<void> serializeFile(const UString& fileName, const Attribute& node, Option opt)
-    {
-        return pack::serializeFile(Serializers::Json, fileName, node, opt);
-    }
-
-    expected<void> deserialize(const UString& content, Attribute& node)
-    {
-        return pack::deserialize(Serializers::Json, content, node);
-    }
-
-    expected<void> deserializeFile(const UString& fileName, Attribute& node)
-    {
-        return deserializeFile(Serializers::Json, fileName, node);
-    }
-} // namespace json
-
-namespace yaml {
-    expected<UString> serialize(const Attribute& node, Option opt)
-    {
-        return pack::serialize(Serializers::Yaml, node, opt);
-    }
-
-    expected<void> serializeFile(const UString& fileName, const Attribute& node, Option opt)
-    {
-        return pack::serializeFile(Serializers::Yaml, fileName, node, opt);
-    }
-
-    expected<void> deserialize(const UString& content, Attribute& node)
-    {
-        return pack::deserialize(Serializers::Yaml, content, node);
-    }
-
-    expected<void> deserializeFile(const UString& fileName, Attribute& node)
-    {
-        return deserializeFile(Serializers::Yaml, fileName, node);
-    }
-} // namespace yaml
 
 } // namespace pack

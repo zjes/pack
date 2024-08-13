@@ -17,7 +17,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
 
-#include <concepts>
 #include <pack/magic-enum.h>
 #include <pack/utils.h>
 #include <sstream>
@@ -38,6 +37,12 @@ Return convert(Value&& value, const Return& def);
 
 template <typename Return, typename Value>
 concept canConvert = requires(Value value) { convert(value)->Return; };
+
+template <typename T>
+bool compareFloat(const T& a, const T& b)
+{
+    return std::abs(a - b) < std::numeric_limits<T>::epsilon();
+}
 
 // =========================================================================================================================================
 
@@ -330,7 +335,7 @@ struct ConvertType<bool>
     }
     static bool convert(std::floating_point auto&& value)
     {
-        return value != 0;
+        return !compareFloat(value, static_cast<decltype(value)>(0));
     }
     static bool convert(std::integral auto&& value)
     {

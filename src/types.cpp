@@ -21,6 +21,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 std::ostream& operator<<(std::ostream& ss, pack::Type value)
 {
-    ss << pack::valueTypeName(value);
+    ss << pack::valueTypeName(value).toStdString();
     return ss;
 }

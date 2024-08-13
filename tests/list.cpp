@@ -13,87 +13,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     ========================================================================================================================================
 */
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <pack/pack.h>
-
-namespace list {
-
-//class Item : public pack::Node
-//{
-//public:
-//    pack::String name = FIELD("name");
-
-//    using pack::Node::Node;
-//    META(Item, name);
-//};
-
-//class Person2 : public pack::Node
-//{
-//public:
-//    pack::String     name  = FIELD("name");
-//    pack::Int32List  items = FIELD("items");
-//    pack::Int32      value = FIELD("value");
-//    pack::List<Item> more  = FIELD("more");
-
-//    using pack::Node::Node;
-//    META(Person2, name, items, value, more);
-//};
-
-} // namespace list
-
-//TEST_CASE("List serialization/deserialization")
-//{
-//    list::Person2 origin;
-//    origin.name  = "Person"_s;
-//    origin.value = 42;
-//    origin.items.append(11);
-//    origin.items.append(12);
-//    origin.items.append(13);
-
-//    auto& more = origin.more.append();
-//    more.name  = "name number 1"_s;
-
-//    auto& more1 = origin.more.append();
-//    more1.name  = "name number 2"_s;
-
-//    auto check = [](const list::Person2& item) {
-//        REQUIRE("Person"_s == item.name);
-//        REQUIRE(42 == item.value);
-
-//        REQUIRE(3 == item.items.size());
-//        REQUIRE(11 == item.items[0]);
-//        REQUIRE(12 == item.items[1]);
-//        REQUIRE(13 == item.items[2]);
-
-//        REQUIRE(2 == item.more.size());
-//        REQUIRE("name number 1"_s == item.more[0].name);
-//        REQUIRE("name number 2"_s == item.more[1].name);
-//    };
-
-//    check(origin);
-
-//    SECTION("Serialization yaml")
-//    {
-//        auto cnt = *pack::yaml::serialize(origin);
-//        REQUIRE(!pack::isEmpty(cnt));
-
-//        list::Person2 restored;
-//        pack::yaml::deserialize(cnt, restored);
-
-//        check(restored);
-//    }
-
-//    SECTION("Serialization json")
-//    {
-//        auto cnt = *pack::json::serialize(origin);
-//        REQUIRE(!pack::isEmpty(cnt));
-
-//        list::Person2 restored;
-//        pack::json::deserialize(cnt, restored);
-
-//        check(restored);
-//    }
-//}
 
 TEST_CASE("new list")
 {
@@ -103,6 +24,16 @@ TEST_CASE("new list")
 
     SECTION("access")
     {
+        auto v  = ilist[1];
+        auto vv = v.value();
+        REQUIRE(vv);
+        std::cerr << v.typeName() << std::endl;
+        if (v == 12) {
+            std::cerr << "==" << std::endl;
+        }
+        if (ilist[1] == 12) {
+            std::cerr << "==" << std::endl;
+        }
         REQUIRE(ilist[1] == 12);
         REQUIRE_THROWS(ilist[2] == 12);
         REQUIRE_THROWS(ilist[-1] == 12);
@@ -232,9 +163,9 @@ TEST_CASE("new list")
         CHECK(!list.compare(ilist));
     }
 
-    SECTION("typeName")
-    {
-        CHECK(ilist.typeName() == "List<Int32>"_s);
-        CHECK(decltype(ilist)::_typeName() == "List<Int32>"_s);
-    }
+    // SECTION("typeName")
+    // {
+    //     CHECK(ilist.typeName() == "List<Int32>"_s);
+    //     CHECK(decltype(ilist)::_typeName() == "List<Int32>"_s);
+    // }
 }

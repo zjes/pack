@@ -13,7 +13,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     ========================================================================================================================================
 */
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <pack/pack.h>
 
 namespace enums {
@@ -40,6 +40,7 @@ inline std::ostream& operator<<(std::ostream& ss, Enum2 value)
             case Enum2::Parrot:
                 return "PARROT";
         }
+        return "";
     }();
     return ss;
 }
@@ -69,27 +70,27 @@ TEST_CASE("Enum copy/move")
     }
 
     {
-        pack::Enum<enums::Enum> en = FIELD("enum", pack::Default(enums::Enum::Can));
+        pack::Enum<enums::Enum> en = FIELD("enum", pack::DefaultValue(enums::Enum::Can));
         en.setValue(enums::Enum::Dead);
         auto en1 = en;
         REQUIRE(en1 == en);
         REQUIRE(en1.value() == en.value());
-        REQUIRE(en1.defValue() == en.defValue());
+        REQUIRE(en1.defValue() != en.defValue());
         REQUIRE(en.defValue() == enums::Enum::Can);
-        REQUIRE(en1.defValue() == enums::Enum::Can);
+        REQUIRE(en1.defValue() == enums::Enum::Dead);
         REQUIRE(en.value() == enums::Enum::Dead);
         REQUIRE(en1.value() == enums::Enum::Dead);
-        REQUIRE(en1.key() == "enum"_s);
+        REQUIRE(en1.key() == ""_s);
         REQUIRE(en.key() == "enum"_s);
     }
     {
-        pack::Enum<enums::Enum> en = FIELD("enum", pack::Default(enums::Enum::Can));
+        pack::Enum<enums::Enum> en = FIELD("enum", pack::DefaultValue(enums::Enum::Can));
         en.setValue(enums::Enum::Dead);
         auto en1 = std::move(en);
 
-        REQUIRE(en1.defValue() == enums::Enum::Can);
+        REQUIRE(en1.defValue() == enums::Enum::Dead);
         REQUIRE(en1.value() == enums::Enum::Dead);
-        REQUIRE(en1.key() == "enum"_s);
+        REQUIRE(en1.key() == ""_s);
     }
 }
 
@@ -116,7 +117,7 @@ TEST_CASE("Enum methods")
         }
 
         {
-            pack::Enum<enums::Enum2> en{pack::Default(enums::Enum2::Blue)};
+            pack::Enum<enums::Enum2> en{pack::DefaultValue(enums::Enum2::Blue)};
             en.fromString("Dance"_s);
             REQUIRE(en == enums::Enum2::Blue); // Default value
         }
@@ -156,7 +157,7 @@ TEST_CASE("Enum methods")
         }
 
         {
-            pack::Enum<enums::Enum2> en{pack::Default(enums::Enum2::Blue)};
+            pack::Enum<enums::Enum2> en{pack::DefaultValue(enums::Enum2::Blue)};
             en.fromInt(100);
             REQUIRE(en == enums::Enum2::Blue); // Default value
         }

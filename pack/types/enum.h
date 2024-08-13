@@ -28,6 +28,8 @@ namespace pack {
 class IEnum : public Attribute
 {
 public:
+    ~IEnum() override;
+
     using Values = std::vector<std::pair<UString, int>>;
 
     template <typename... Options>
@@ -39,19 +41,19 @@ public:
 
 public:
     /// Returns a string representation of the enum value
-    virtual UString asString() const = 0;
+    [[nodiscard]] virtual UString asString() const = 0;
 
     /// Sets enum value from string
     virtual void fromString(const UString& value) = 0;
 
     /// Returns a string representation of the enum value
-    virtual int asInt() const = 0;
+    [[nodiscard]] virtual int asInt() const = 0;
 
     /// Sets enum value from string
     virtual void fromInt(int value) = 0;
 
     /// Return values map for Name -> int pairs
-    virtual Values values() const = 0;
+    [[nodiscard]] virtual Values values() const = 0;
 };
 
 // =========================================================================================================================================
@@ -61,7 +63,7 @@ class Enum : public IEnum
 {
 public:
     using IEnum::IEnum;
-    using Default = Default<T>;
+    using Default = DefaultValue<T>;
 
 public:
     /// ctor. Initialize enum with value and options
@@ -69,72 +71,170 @@ public:
     /// @param opts options
     template <typename... Options>
     Enum(const T& value, Options&&... opts)
-    requires allIsOptions<Options...>;
+    requires allIsOptions<Options...>
+        : Enum(std::forward<Options>(opts)...)
+    {
+        setValue(value);
+    }
 
     /// ctor. Initialize enun with  options
     /// @param opts options
     template <typename... Options>
     Enum(Options&&... opts)
-    requires allIsOptions<Options...>;
+    requires allIsOptions<Options...>
+        : IEnum(std::forward<Options>(opts)...)
+    {
+        if (auto ret = pickOption<Default>(opts...)) {
+            m_def   = ret->get();
+            m_value = m_def;
+        }
+    }
 
-    Enum(const Enum& other) = default;
-    Enum(Enum&& other)      = default;
-    Enum();
+    Enum(const Enum& other)
+        : m_value(other.m_value)
+    {
+    }
+
+    Enum(Enum&& other)
+        : m_value(std::move(other.m_value))
+    {
+    }
+
+    Enum()
+        : IEnum()
+    {
+    }
+
 
 public:
     /// Returns default value
-    const T& defValue() const;
+    [[nodiscard]] const T& defValue() const
+    {
+        return m_def;
+    }
 
     /// Returns value
-    const T& value() const;
+    [[nodiscard]] const T& value() const
+    {
+        return m_value;
+    }
 
     /// Returns value
-    operator const T&() const;
+    operator const T&() const
+    {
+        return m_value;
+    }
 
     /// Sets the value
     /// @param val value to set
     template <typename Value>
-    void setValue(Value&& val);
+    void setValue(Value&& val)
+    {
+        if constexpr (std::same_as<T, std::decay_t<Value>>) {
+            _setValue(val);
+        } else if constexpr (canConvert<T, Value>) {
+            _setValue(convert<T>(val, m_def));
+        } else {
+            static_assert(always_false<Value>, "Unsupported type");
+        }
+    }
 
     /// Assigmen operator
-    Enum& operator=(const T& val);
+    Enum& operator=(const T& val)
+    {
+        _setValue(val);
+        return *this;
+    }
 
 public:
     /// Compares enums
-    int compare(const Attribute& other) const override;
+    [[nodiscard]] int compare(const Attribute& other) const override
+    {
+        if (auto casted = dynamic_cast<const Enum<T>*>(&other)) {
+            if (value() < casted->value())
+                return -1;
+            if (value() > casted->value())
+                return 1;
+            return 0;
+        }
+        return -1;
+    }
 
     /// Returns type name enum<T>
-    UString typeName() const override;
+    [[nodiscard]] UString typeName() const override
+    {
+        return format("Enum<{}>"_s, magic_enum::enum_type_name<T>());
+    }
 
     /// Return values map for Name -> int pairs
-    Values values() const override;
+    [[nodiscard]] Values values() const override
+    {
+        IEnum::Values ret;
+        for (const auto& [val, name] : magic_enum::enum_entries<T>()) {
+            ret.emplace_back(std::string{name}, int(val));
+        }
+        return ret;
+    }
 
     /// Sets the enum
-    void set(const Attribute& other) override;
+    void set(const Attribute& other) override
+    {
+        if (auto casted = dynamic_cast<const Enum<T>*>(&other)) {
+            _setValue(*casted);
+        }
+    }
 
     /// Sets the enum
-    void set(Attribute&& other) override;
+    void set(Attribute&& other) override
+    {
+        if (auto casted = dynamic_cast<Enum<T>*>(&other)) {
+            _setValue(std::move(*casted));
+        }
+    }
 
     /// Returns true if enum has value
-    bool empty() const override;
+    [[nodiscard]] bool empty() const override
+    {
+        return m_value == m_def;
+    }
 
     /// Clears enum value
-    void clear() override;
+    void clear() override
+    {
+        _setValue(m_def);
+    }
 
     /// Returns enum value as string representation
-    UString asString() const override;
+    [[nodiscard]] UString asString() const override
+    {
+        return convert<UString>(value());
+    }
 
     /// Sets enum value from string
-    void fromString(const UString& value) override;
+    void fromString(const UString& value) override
+    {
+        _setValue(convert<T>(value, m_def));
+    }
 
     /// Returns enum as int representation
-    int asInt() const override;
+    [[nodiscard]] int asInt() const override
+    {
+        return int(value());
+    }
 
     /// Sets enum value from int
-    void fromInt(int value) override;
+    void fromInt(int value) override
+    {
+        _setValue(convert<T>(value, m_def));
+    }
 
 private:
-    void _setValue(T value);
+    void _setValue(T val)
+    {
+        if (value() != val) {
+            m_value = val;
+        }
+    }
 
 protected:
     T m_value = {};
@@ -144,5 +244,3 @@ protected:
 // =========================================================================================================================================
 
 } // namespace pack
-
-#include "pack/types/private/enum.inl" // IWYU pragma: keep

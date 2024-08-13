@@ -14,13 +14,6 @@ pack = cmake.SharedLib(
         "pack/types/node.h",
         "pack/types/binary.h",
 
-        "pack/types/private/string.inl",
-        "pack/types/private/list.inl",
-        "pack/types/private/map.inl",
-        "pack/types/private/value.inl",
-        "pack/types/private/enum.inl",
-        "pack/types/private/binary.inl",
-
         "pack/pack.h",
         "pack/attribute.h",
         "pack/options.h",
@@ -28,23 +21,38 @@ pack = cmake.SharedLib(
         "pack/convert.h",
         "pack/utils.h",
         "pack/magic-enum.h",
-        "pack/expected.h",
         "pack/ustring.h",
         "pack/flags.h",
         "pack/meta.h",
         "pack/serialization.h",
+        "pack/visitor.h",
 
-        "src/node.cpp",
+        "src/types/enum.cpp",
+        "src/types/node.cpp",
+        "src/types/binary.cpp",
+        "src/types/map.cpp",
+        "src/types/list.cpp",
+        "src/types/value.cpp",
+        "src/types/string.cpp",
+
         "src/attribute.cpp",
         "src/ustring.cpp",
         "src/types.cpp",
         "src/serialization.cpp",
-        "pack/private/ustring.inl"
+        "src/providers/json.cpp",
+        "src/providers/json.h",
+        "src/providers/yaml.cpp",
+        "src/providers/yaml.h",
     ],
     dependencies = [
         cmake.Dependency("yaml-cpp"),
         cmake.Dependency("nlohmann_json::nlohmann_json"),
-        cmake.Dependency("fmt::fmt", public = True)
+        cmake.Dependency("tl-expected", public = True, targetName = "tl::expected"),
+    ],
+    flags = [
+        "-fsanitize=address",
+        "-fsanitize=undefined",
+        "-fsanitize=leak",
     ]
 )
 
@@ -58,14 +66,18 @@ else:
 
 if cmake.Config.buildTesting:
     pack.addTest([
+        "tests/catch2.h",
         "tests/ustring.cpp",
         "tests/types.cpp",
         "tests/convert.cpp",
-        "tests/expected.cpp",
         "tests/value.cpp",
         "tests/list.cpp",
         "tests/node.cpp",
         "tests/map.cpp",
         "tests/enums.cpp",
         "tests/binary.cpp",
-    ])
+
+        "tests/serialize/value.cpp",
+        "tests/serialize/node.cpp",
+    ]
+    )

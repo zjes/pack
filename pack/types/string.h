@@ -20,6 +20,7 @@
 
 #include "pack/types.h"
 #include "pack/types/value.h"
+#include <iostream>
 
 namespace pack {
 
@@ -33,25 +34,35 @@ public:
     using Value<Type::String>::operator==;
     using Value<Type::String>::operator<=>;
 
-    inline friend std::ostream& operator<<(std::ostream& ss, const String& s);
+    String(const String& other);
+    ~String() override;
 
-    inline int  size() const;
-    inline operator UString() const;
+    String& operator=(const String& other);
+    String& operator=(String&& other);
 
+    [[nodiscard]] int size() const;
+    operator UString() const;
     String operator+=(const String& other);
     String operator+=(typename String::ConstRefType other);
 
 #ifdef WITH_QT
-    friend QDebug operator<<(QDebug debug, const String &value);
+    friend QDebug operator<<(QDebug debug, const String& value);
 #endif
+    friend std::ostream& operator<<(std::ostream& ss, const String& s);
 };
 
 // =========================================================================================================================================
 
 #ifdef WITH_QT
-QDebug operator<<(QDebug debug, const String &value);
+QDebug operator<<(QDebug debug, const String& value);
 #endif
+std::ostream& operator<<(std::ostream& ss, const String& s);
 
 } // namespace pack
 
-#include <pack/types/private/string.inl> // IWYU pragma: keep
+inline pack::String operator+(const pack::UString& l, const pack::String& r)
+{
+    pack::UString str(l);
+    str += r.value();
+    return str;
+}

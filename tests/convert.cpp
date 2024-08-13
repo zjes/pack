@@ -17,7 +17,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 
 #include "pack/convert.h"
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <iostream>
 
 using namespace Catch::literals;
@@ -34,7 +34,7 @@ enum class Parrot
     Green = 2
 };
 
-std::ostream& operator<<(std::ostream& ss, Test value)
+static std::ostream& operator<<(std::ostream& ss, Test value)
 {
     switch (value) {
         case Test::One:
@@ -47,7 +47,7 @@ std::ostream& operator<<(std::ostream& ss, Test value)
     return ss;
 }
 
-std::istream& operator>>(std::istream& ss, Test& value)
+static std::istream& operator>>(std::istream& ss, Test& value)
 {
     std::string str;
     ss >> str;
@@ -138,9 +138,9 @@ TEST_CASE("Convert")
     CHECK(true == pack::convert<bool>("1"));
 
     CHECK(0.f == pack::convert<float>("0"));
-    CHECK(42.42f == pack::convert<float>("42.42"));
-    CHECK(44.44f == pack::convert<float>(44.44f));
-    CHECK(44.44f == pack::convert<float>(44.44));
+    CHECK(pack::compareFloat(42.42f, pack::convert<float>("42.42")));
+    CHECK(pack::compareFloat(44.44f, pack::convert<float>(44.44f)));
+    CHECK(pack::compareFloat(44.44f, pack::convert<float>(44.44)));
     CHECK(0.f == pack::convert<float>(false));
     CHECK(1.f == pack::convert<float>(true));
 

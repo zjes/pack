@@ -17,14 +17,50 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
 
-#include <fmt/format.h>
 #include <pack/types.h>
-#include <string>
+#include <pack/ustring.h>
+#include <tl/expected.hpp>
 #ifdef WITH_QT
 #include <QString>
 #endif
 
 namespace pack {
+
+class UString;
+template <typename T>
+using expected = tl::expected<T, UString>;
+
+class unexpected : public tl::unexpected<UString>
+{
+public:
+    using tl::unexpected<UString>::unexpected;
+
+    template <typename... Args>
+    unexpected(UString&& str, Args&&... args)
+        : tl::unexpected<UString>(std::vformat(str.toStdString(), std::make_format_args(args...)))
+    {
+    }
+
+    template <typename... Args>
+    unexpected(std::string&& str, Args&&... args)
+        : tl::unexpected<UString>(std::vformat(str, std::make_format_args(args...)))
+    {
+    }
+
+    template <typename... Args>
+    unexpected(const char* str, Args&&... args)
+        : tl::unexpected<UString>(std::vformat(str, std::make_format_args(args...)))
+    {
+    }
+
+#ifdef WITH_QT
+    template <typename... Args>
+    unexpected(QString&& str, Args&&... args)
+        : tl::unexpected<UString>(std::vformat(str.toStdString(), std::make_format_args(args...)))
+    {
+    }
+#endif
+};
 
 // =========================================================================================================================================
 
@@ -58,6 +94,11 @@ concept isSame = std::same_as<UseType<T>, CppType>;
 
 // =========================================================================================================================================
 
+template <typename Base, typename T>
+concept isSubtype = std::is_base_of_v<Base, T>;
+
+// =========================================================================================================================================
+
 template <typename T, typename CppType>
 concept isConvertable = std::convertible_to<UseType<T>, CppType>;
 
@@ -69,22 +110,25 @@ constexpr std::false_type always_false{};
 // =========================================================================================================================================
 
 template <typename T>
-concept enumerable = std::is_enum<T>::value;
+concept enumerable = std::is_enum_v<T>;
 
 template <typename T>
 concept enumerableToStream = enumerable<T> && requires(std::ostream os, T value) {
-    {
-        os << value
-    };
+    { os << value };
 };
 
 template <typename T>
 concept enumerableFromStream = enumerable<T> && requires(std::istream os, T value) {
-    {
-        os >> value
-    };
+    { os >> value };
 };
 
 // =========================================================================================================================================
 
 } // namespace pack
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const tl::expected<T, pack::UString>& /*value*/)
+{
+    // os << value.value_or();
+    return os;
+}

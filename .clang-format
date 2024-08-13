@@ -28,7 +28,6 @@ AlwaysBreakTemplateDeclarations: true
 BinPackArguments: true
 BinPackParameters: false
 BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
 ColumnLimit: 140
 BreakConstructorInitializers: BeforeComma
@@ -51,7 +50,6 @@ Cpp11BracedListStyle: true
 
 DerivePointerAlignment: false
 ExperimentalAutoDetectBinPacking: false
-IndentCaseLabels: false
 IndentWidth:     4
 IndentWrappedFunctionNames: false
 IncludeBlocks: Merge

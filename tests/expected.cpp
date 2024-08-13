@@ -17,7 +17,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #include <catch2/catch.hpp>
 #include <expected>
-#include <pack/expected.h>
 
 struct St
 {
@@ -36,7 +35,7 @@ TEST_CASE("expected")
 {
     SECTION("expected")
     {
-        auto it = pack::expected<int>(32);
+        auto it = std::expected<int, >(32);
         CHECK(it);
         CHECK(32 == *it);
     }

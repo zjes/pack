@@ -1,9 +1,8 @@
 #include "pack/ustring.h"
-#include <algorithm>
-#include <iostream>
 #ifndef WITH_QT
-#include <utf8.h>
+#include <algorithm>
 #include <regex>
+#include <utf8.h>
 #else
 #include <QRegularExpression>
 #endif
@@ -12,7 +11,7 @@ namespace pack {
 
 UString::UString(const char* val)
 #ifdef WITH_QT
-    : m_string(QString::fromStdString(val))
+    : m_string(QString::fromUtf8(val))
 #else
     : m_string(val)
 #endif
@@ -38,7 +37,7 @@ UString::UString(const QString& val)
 
 UString::UString(const char* str, std::size_t size)
 #ifdef WITH_QT
-    : m_string(QString::fromUtf8(str, size))
+    : m_string(QString::fromUtf8(str, qsizetype(size)))
 #else
     : m_string(std::string(str, size))
 #endif
@@ -238,8 +237,8 @@ std::vector<UString> UString::split(const UString& sep, SplitOption options) con
         beh |= Qt::SkipEmptyParts;
     }
     std::vector<UString> ret;
-    auto res = m_string.split(QRegularExpression(sep.toQString()), beh);
-    for(const auto& it: res) {
+    auto                 res = m_string.split(QRegularExpression(sep.toQString()), beh);
+    for (const auto& it : res) {
         if (it.isEmpty() && isSet(options, SplitOption::SkipEmpty)) {
             continue;
         }
@@ -249,7 +248,7 @@ std::vector<UString> UString::split(const UString& sep, SplitOption options) con
 #else
     std::regex rex(sep.toStdString());
     try {
-        std::vector<UString> ret;
+        std::vector<UString>       ret;
         std::sregex_token_iterator iter(m_string.begin(), m_string.end(), rex, -1);
         std::sregex_token_iterator end;
         for (; iter != end; ++iter) {
@@ -268,5 +267,63 @@ std::vector<UString> UString::split(const UString& sep, SplitOption options) con
     }
 #endif
 }
+
+bool UString::contains(const UString& s, CaseSensitivity cs) const
+{
+    if (cs == CaseSensitivity::Insensitive) {
+#ifdef WITH_QT
+        return m_string.contains(s.toQString(), Qt::CaseInsensitive);
+#else
+        auto cmp = s.toUpper();
+        return toUpper().m_string.find(cmp.m_string) != std::string::npos;
+#endif
+    } else {
+#ifdef WITH_QT
+        return m_string.contains(s.toQString(), Qt::CaseSensitive);
+#else
+        return m_string.find(s.m_string) != std::string::npos;
+#endif
+    }
+}
+
+void UString::replace(const UString& s, const UString& s1, CaseSensitivity cs)
+{
+#ifdef WITH_QT
+    m_string.replace(s.toQString(), s1.toQString(), cs == CaseSensitivity::Sensitive ? Qt::CaseSensitive : Qt::CaseInsensitive);
+#else
+    if (cs == CaseSensitivity::Insensitive) {
+        auto tmp      = toUpper();
+        auto find     = s.toUpper();
+        auto position = tmp.m_string.find(find.m_string);
+        while (position != std::string::npos) {
+            m_string.replace(position, s.m_string.size(), s1.m_string);
+            tmp.m_string.replace(position, s.m_string.size(), s1.m_string);
+            position = tmp.m_string.find(find.m_string);
+        }
+    } else {
+        auto position = m_string.find(s.m_string);
+        while (position != std::string::npos) {
+            m_string.replace(position, s.m_string.size(), s1.m_string);
+            position = m_string.find(s.m_string);
+        }
+    }
+#endif
+}
+
+void UString::replace(const std::regex& re, const UString& s1)
+{
+#ifdef WITH_QT
+    std::string result;
+    std::string find = s1.toStdString();
+    std::string tmp  = m_string.toStdString();
+    std::regex_replace(std::back_inserter(result), tmp.begin(), tmp.end(), re, find);
+    m_string = QString::fromStdString(result);
+#else
+    std::string result;
+    std::regex_replace(std::back_inserter(result), m_string.begin(), m_string.end(), re, s1.m_string);
+    m_string = result;
+#endif
+}
+
 
 } // namespace pack

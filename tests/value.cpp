@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <pack/pack.h>
 
 TEST_CASE("Value")
@@ -11,6 +11,7 @@ TEST_CASE("Value")
         REQUIRE(def.empty());
 
         pack::Int32 val(42);
+        std::cerr << val.typeName() << std::endl;
         REQUIRE(val.value() == 42);
         REQUIRE(val.defValue() == 0);
         REQUIRE(!val.empty());
@@ -37,7 +38,7 @@ TEST_CASE("Value")
         REQUIRE(val3.key() == "some key"_s);
         REQUIRE(!val3.empty());
         REQUIRE(val3.valueType() == pack::Type::Int32);
-        REQUIRE(val3.typeName() == "Value<Int32>"_s);
+        REQUIRE(val3.typeName() == "NumericValue<Int32>"_s);
 
         REQUIRE(val == val3);
         REQUIRE(val != def);
@@ -102,7 +103,7 @@ TEST_CASE("Value")
         REQUIRE(val3.key() == "some key"_s);
         REQUIRE(!val3.empty());
         REQUIRE(val3.valueType() == pack::Type::Float);
-        REQUIRE(val3.typeName() == "Value<Float>"_s);
+        REQUIRE(val3.typeName() == "NumericValue<Float>"_s);
 
         REQUIRE(val == val3);
         REQUIRE(val != def);

@@ -13,7 +13,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     ========================================================================================================================================
 */
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <pack/pack.h>
 #ifdef WITH_QT
 #include <QHash>
@@ -43,8 +43,9 @@ TEST_CASE("map")
     }
 #ifdef WITH_QT
     {
-        QHash<QString, QString> hash = {{QStringLiteral("one"), QStringLiteral("val1")}, {QStringLiteral("second"), QStringLiteral("val2")}};
-        pack::StringMap         smap(hash);
+        QHash<QString, QString> hash =
+            {{QStringLiteral("one"), QStringLiteral("val1")}, {QStringLiteral("second"), QStringLiteral("val2")}};
+        pack::StringMap smap(hash);
 
         CHECK(!smap.empty());
         CHECK(smap.size() == 2);
@@ -64,7 +65,7 @@ TEST_CASE("map")
 #endif
     {
         std::map<pack::UString, pack::UString> map = {{"one"_s, "val1"_s}, {"second"_s, "val2"_s}};
-        pack::StringMap                          smap(map);
+        pack::StringMap                        smap(map);
 
         CHECK(!smap.empty());
         CHECK(smap.size() == 2);

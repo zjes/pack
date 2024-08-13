@@ -19,11 +19,12 @@
 #pragma once
 
 // #include "pack/serialization.h" // IWYU pragma: keep
-#include "pack/types/binary.h" // IWYU pragma: keep
-#include "pack/types/enum.h"   // IWYU pragma: keep
+#include "pack/serialization.h" // IWYU pragma: keep
+#include "pack/types/binary.h"  // IWYU pragma: keep
+#include "pack/types/enum.h"    // IWYU pragma: keep
 #include "pack/types/list.h"
 #include "pack/types/map.h"
-#include "pack/types/node.h"   // IWYU pragma: keep
+#include "pack/types/node.h" // IWYU pragma: keep
 #include "pack/types/string.h"
 #include "pack/types/value.h"
 

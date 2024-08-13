@@ -18,8 +18,6 @@
 ========================================================================================================================================= */
 #pragma once
 
-#include <any>
-#include <typeindex>
 #include <pack/convert.h>
 
 namespace pack {
@@ -44,10 +42,10 @@ struct Key : public FieldOption
 
 // =========================================================================================================================================
 
-template<typename T>
-struct Default : public FieldOption
+template <typename T>
+struct DefaultValue : public FieldOption
 {
-    explicit Default(const T& def)
+    explicit DefaultValue(const T& def)
         : value(UseType<T>(def))
     {
     }
@@ -59,6 +57,8 @@ struct Default : public FieldOption
 
     UseType<T> value;
 };
+template <typename T>
+DefaultValue(T (*)()) -> DefaultValue<T>;
 
 // =========================================================================================================================================
 

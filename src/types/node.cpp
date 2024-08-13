@@ -86,4 +86,4 @@ const std::vector<pack::UString>& Node::staticFieldNames()
     return items;
 }
 
-}
+} // namespace pack

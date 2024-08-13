@@ -35,8 +35,12 @@
     }
 
 
+namespace pack {
+
 template <typename T>
 bool isSet(T flag, T option)
 {
     return std::underlying_type_t<T>(flag & option);
 }
+
+} // namespace pack

@@ -1,13 +1,15 @@
 #pragma once
 
 #ifdef WITH_QT
+#include <QDebug>
 #include <QString>
 #else
 #include <string>
 #endif
-#include <fmt/format.h>
+#include <format>
 #include <ostream>
 #include <pack/flags.h>
+#include <regex>
 #include <vector>
 
 namespace pack {
@@ -30,7 +32,6 @@ ENABLE_FLAGS(SplitOption);
 
 class UString
 {
-
 public:
 #ifdef WITH_QT
     using Type = QString;
@@ -53,6 +54,10 @@ public:
     [[nodiscard]] bool isEmpty() const;
     [[nodiscard]] bool startsWith(const UString& s, CaseSensitivity cs = CaseSensitivity::Sensitive) const;
     [[nodiscard]] bool endsWith(const UString& s, CaseSensitivity cs = CaseSensitivity::Sensitive) const;
+    [[nodiscard]] bool contains(const UString& s, CaseSensitivity cs = CaseSensitivity::Sensitive) const;
+
+    void replace(const UString& s, const UString& s1, CaseSensitivity cs = CaseSensitivity::Sensitive);
+    void replace(const std::regex& re, const UString& s1);
 
 public:
     [[nodiscard]] UString toLower() const;
@@ -66,7 +71,7 @@ public:
 
     template <typename T>
     requires std::integral<T> || std::floating_point<T>
-    int toNumber() const;
+    [[nodiscard]] int toNumber() const;
 
 public:
     UString& append(char ch);
@@ -84,7 +89,7 @@ public:
     UString operator+=(const UString& str);
 
 public:
-    int size() const;
+    [[nodiscard]] int size() const;
 
 public:
     [[nodiscard]] std::string toStdString() const;
@@ -94,8 +99,8 @@ public:
 
 public:
     template <typename T>
-    requires std::convertible_to<T, Type> bool
-    operator==(const T& other) const;
+    requires std::convertible_to<T, Type>
+    bool operator==(const T& other) const;
 
     bool operator==(const UString& other) const;
 
@@ -105,11 +110,11 @@ public:
 
     std::strong_ordering operator<=>(const UString& other) const;
 
-    std::strong_ordering compare(const UString& other) const;
+    [[nodiscard]] std::strong_ordering compare(const UString& other) const;
 
     [[nodiscard]] std::vector<UString> split(const UString& sep, SplitOption options = SplitOption::KeepEmpty | SplitOption::Trim) const;
 
-    friend std::ostream& operator<<(std::ostream& ss, const pack::UString& value);
+    // friend std::ostream& operator<<(std::ostream& ss, const pack::UString& value);
 #ifdef WITH_QT
     friend QDebug operator<<(QDebug debug, const UString& value);
 #endif
@@ -119,11 +124,28 @@ private:
 }; // namespace pack
 
 template <typename... Args>
-UString format(const UString& fmt, const Args&... args);
+UString format(const UString& fmt, const Args&... args)
+{
+    return std::vformat(fmt.toStdString(), std::make_format_args(args...));
+}
 
-std::ostream& operator<<(std::ostream& ss, const UString& value);
+
+// inline std::ostream& operator<<(std::ostream& ss, const UString& value)
+// {
+// #ifdef WITH_QT
+//     ss << qPrintable(value.m_string);
+// #else
+//     ss << value.m_string;
+// #endif
+//     return ss;
+// }
+
 #ifdef WITH_QT
-QDebug operator<<(QDebug debug, const UString& value);
+inline QDebug operator<<(QDebug debug, const UString& value)
+{
+    debug << qPrintable(value.m_string);
+    return debug;
+}
 #endif
 
 } // namespace pack
@@ -131,33 +153,83 @@ QDebug operator<<(QDebug debug, const UString& value);
 // =========================================================================================================================================
 
 /// String literal
-pack::UString operator"" _s(const char* str, std::size_t size);
+inline pack::UString operator""_s(const char* str, std::size_t size)
+{
+    return pack::UString(str, size);
+}
+
 
 template <typename T>
 requires std::convertible_to<T, std::string>
-pack::UString operator+(const pack::UString& l, const T& r);
+pack::UString operator+(const pack::UString& l, const T& r)
+{
+    return l + r;
+}
 
 template <typename T>
 requires std::same_as<T, pack::UString>
-pack::UString operator+(const pack::UString& l, const T& r);
+pack::UString operator+(const pack::UString& l, const T& r)
+{
+#ifdef WITH_QT
+    return pack::UString(l.toQString() + r.toQString());
+#else
+    return pack::UString(l.toStdString() + r.toStdString());
+#endif
+}
 
 // =========================================================================================================================================
-
-namespace fmt {
 
 /// Helper to format UString enity into fmt
 template <>
-struct formatter<pack::UString>
+struct std::formatter<pack::UString>
 {
-    template <typename ParseContext>
-    constexpr auto parse(ParseContext& ctx);
+    constexpr auto parse(std::format_parse_context& ctx)
+    {
+        return ctx.begin();
+    }
 
-    template <typename FormatContext>
-    auto format(const pack::UString& attr, FormatContext& ctx);
+    auto format(const pack::UString& attr, std::format_context& ctx) const
+    {
+        return std::format_to(ctx.out(), "{}", attr.toStdString());
+    }
 };
-
-} // namespace fmt
 
 // =========================================================================================================================================
 
-#include <pack/private/ustring.inl>
+template <typename T>
+requires std::integral<T> || std::floating_point<T>
+pack::UString pack::UString::fromNumber(T value)
+{
+    return format("{}", value);
+}
+
+template <typename T>
+requires std::integral<T> || std::floating_point<T>
+int pack::UString::toNumber() const
+{
+    return convert<T>(m_string);
+}
+
+template <typename T>
+requires std::convertible_to<T, pack::UString::Type>
+bool pack::UString::operator==(const T& other) const
+{
+    return compare(other) == std::strong_ordering::equal;
+}
+
+inline bool pack::UString::operator==(const UString& other) const
+{
+    return this->compare(other) == std::strong_ordering::equal;
+}
+
+template <typename T>
+requires std::convertible_to<T, pack::UString::Type>
+std::strong_ordering pack::UString::operator<=>(const T& other) const
+{
+    return compare(other);
+}
+
+inline std::strong_ordering pack::UString::operator<=>(const UString& other) const
+{
+    return compare(other);
+}

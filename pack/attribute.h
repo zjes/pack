@@ -17,15 +17,12 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
 #pragma once
-#include "pack/types.h"
 #include <pack/options.h>
 #ifdef WITH_QT
 #include <QObject>
 #endif
+
 namespace pack {
-
-// =========================================================================================================================================
-
 
 // =========================================================================================================================================
 
@@ -38,8 +35,7 @@ public:
         Value,
         Enum,
         List,
-        Map,
-        Variant
+        Map
     };
 
 public:
@@ -50,21 +46,20 @@ public:
     Attribute(Attribute&&)      = default;
     virtual ~Attribute();
 
-    virtual int     compare(const Attribute& other) const = 0;
-    virtual UString typeName() const                      = 0;
-    virtual void    set(const Attribute& other)           = 0;
-    virtual void    set(Attribute&& other)                = 0;
-    virtual bool    empty() const                         = 0;
-    virtual void    clear()                               = 0;
+    [[nodiscard]] virtual int     compare(const Attribute& other) const = 0;
+    [[nodiscard]] virtual UString typeName() const                      = 0;
+    [[nodiscard]] virtual bool    empty() const                         = 0;
+    [[nodiscard]] const UString&  key() const;
+    [[nodiscard]] NodeType        type() const;
 
-    const UString& key() const;
+    virtual void set(const Attribute& other) = 0;
+    virtual void set(Attribute&& other)      = 0;
+    virtual void clear()                     = 0;
 
     int operator<=>(const Attribute& other) const;
 
     Attribute& operator=(const Attribute&) = default;
     Attribute& operator=(Attribute&&)      = default;
-
-    NodeType type() const;
 
 protected:
     UString  m_key;

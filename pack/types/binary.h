@@ -30,14 +30,16 @@ public:
     using Value<Type::Bytes>::operator=;
 
     Binary();
+    Binary(const Binary&);
+    Binary(Binary&&);
+    ~Binary() override;
 
-    inline static Binary fromString(const UString& data);
+    Binary& operator=(const Binary&);
+    Binary& operator=(Binary&&);
 
-    inline void    setString(const UString& data);
-    inline void    setString(const char* data, size_t size);
-    inline UString asString() const;
+    static Binary         fromString(const UString& data);
+    void                  setString(const UString& data);
+    [[nodiscard]] UString asString() const;
 };
 
 } // namespace pack
-
-#include "pack/types/private/binary.inl" // IWYU pragma: keep

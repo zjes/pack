@@ -1,5 +1,4 @@
-#include <catch2/catch.hpp>
-#include <iostream>
+#include <catch2/catch_all.hpp>
 #include <pack/types.h>
 
 TEST_CASE("string")
@@ -86,6 +85,30 @@ TEST_CASE("string")
         CHECK("val"_s.append(QLatin1String("str")) == "valstr"_s);
         CHECK("val"_s.append(QLatin1String("str")) == "valstr"_s);
 #endif
+    }
+
+    {
+        CHECK("value"_s.contains("alu"));
+        CHECK("value"_s.contains("ALU", pack::CaseSensitivity::Insensitive));
+        CHECK("VALUE"_s.contains("alu", pack::CaseSensitivity::Insensitive));
+    }
+
+    {
+        pack::UString str = "red parrot with red eyes";
+        str.replace("red", "yellow");
+        CHECK(str == "yellow parrot with yellow eyes");
+    }
+
+    {
+        pack::UString str = "red parrot with red eyes";
+        str.replace("RED", "yellow", pack::CaseSensitivity::Insensitive);
+        CHECK(str == "yellow parrot with yellow eyes");
+    }
+
+    {
+        pack::UString str = "red parrot with red eyes";
+        str.replace(std::regex("\\bred\\b"), "yellow");
+        CHECK(str == "yellow parrot with yellow eyes");
     }
 }
 

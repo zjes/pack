@@ -1,7 +1,7 @@
 #pragma once
-#include <pack/ustring.h>
-#include <pack/attribute.h>
 #include <algorithm>
+#include <pack/attribute.h>
+#include <pack/ustring.h>
 
 namespace pack {
 
@@ -23,17 +23,17 @@ public:
         m_fields.insert(m_fields.end(), parent.m_fields.begin(), parent.m_fields.end());
     }
 
-    const std::vector<Attribute*>& fields() const
+    [[nodiscard]] const std::vector<Attribute*>& fields() const
     {
         return m_fields;
     }
 
-    std::vector<Attribute*>& fields()
+    [[nodiscard]] std::vector<Attribute*>& fields()
     {
         return m_fields;
     }
 
-    const Attribute* field(const UString& name) const
+    [[nodiscard]] const Attribute* field(const UString& name) const
     {
         auto it = std::find_if(m_fields.begin(), m_fields.end(), [&name](const auto* fld) {
             return fld->key() == name;
@@ -48,4 +48,4 @@ private:
     std::vector<Attribute*> m_fields;
 };
 
-}
+} // namespace pack

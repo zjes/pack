@@ -19,7 +19,6 @@
 #pragma once
 
 #include "pack/attribute.h"
-#include "pack/expected.h"
 #include "pack/utils.h"
 
 namespace pack {
@@ -33,29 +32,15 @@ enum class Option
 
 ENABLE_FLAGS(Option)
 
-enum class Serializers
+enum class Serializer
 {
     Json,
     Yaml
 };
 
-expected<UString> serialize(Serializers serializer, const Attribute& node, Option opt = Option::No);
-expected<void>    serializeFile(Serializers serializer, const UString& fileName, const Attribute& node, Option opt = Option::No);
-expected<void>    deserialize(Serializers serializer, const UString& content, Attribute& node);
-expected<void>    deserializeFile(Serializers serializer, const UString& fileName, Attribute& node);
-
-namespace json {
-    expected<UString> serialize(const Attribute& node, Option opt = Option::No);
-    expected<void>    serializeFile(const UString& fileName, const Attribute& node, Option opt = Option::No);
-    expected<void>    deserialize(const UString& content, Attribute& node);
-    expected<void>    deserializeFile(const UString& fileName, Attribute& node);
-} // namespace json
-
-namespace yaml {
-    expected<UString> serialize(const Attribute& node, Option opt = Option::No);
-    expected<void>    serializeFile(const UString& fileName, const Attribute& node, Option opt = Option::No);
-    expected<void>    deserialize(const UString& content, Attribute& node);
-    expected<void>    deserializeFile(const UString& fileName, Attribute& node);
-} // namespace yaml
+expected<UString> serialize(Serializer serializer, const Attribute& node, Option opt = Option::No);
+expected<void>    serializeFile(Serializer serializer, const UString& fileName, const Attribute& node, Option opt = Option::No);
+expected<void>    deserialize(Serializer serializer, const UString& content, Attribute& node);
+expected<void>    deserializeFile(Serializer serializer, const UString& fileName, Attribute& node);
 
 } // namespace pack

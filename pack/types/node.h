@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>
 #include <pack/attribute.h>
 #include <pack/meta.h>
 
@@ -6,7 +7,7 @@ namespace pack {
 
 #define FIELD(key, ...)                                                                                                                    \
     {                                                                                                                                      \
-        pack::Key(key##_s), ##__VA_ARGS__                                                                                                  \
+        pack::Key(key##_s), __VA_ARGS__                                                                                                    \
     }
 
 #define META_METHODS(Name, ...)                                                                                                            \
@@ -24,6 +25,16 @@ namespace pack {
     {                                                                                                                                      \
         copyFields(other);                                                                                                                 \
     }                                                                                                                                      \
+    Name& operator=(const Name& other)                                                                                                     \
+    {                                                                                                                                      \
+        copyFields(other);                                                                                                                 \
+        return *this;                                                                                                                      \
+    }                                                                                                                                      \
+    Name& operator=(Name&& other)                                                                                                          \
+    {                                                                                                                                      \
+        moveFields(std::move(other));                                                                                                      \
+        return *this;                                                                                                                      \
+    }                                                                                                                                      \
     inline static const std::vector<pack::UString>& staticFieldNames()                                                                     \
     {                                                                                                                                      \
         static std::vector<pack::UString> names = []() {                                                                                   \
@@ -33,19 +44,33 @@ namespace pack {
             return baseFields;                                                                                                             \
         }();                                                                                                                               \
         return names;                                                                                                                      \
+    }                                                                                                                                      \
+    static pack::UString typeInfo()                                                                                                        \
+    {                                                                                                                                      \
+        return #Name;                                                                                                                      \
     }
 
 #define META(Name, ...)                                                                                                                    \
+public:                                                                                                                                    \
     using Super = Node;                                                                                                                    \
     using Super::Super;                                                                                                                    \
+    META_METHODS(Name, __VA_ARGS__)                                                                                                        \
+private:                                                                                                                                   \
     pack::Meta m_meta = pack::Meta(#Name, __VA_ARGS__);                                                                                    \
-    META_METHODS(Name, __VA_ARGS__)
+                                                                                                                                           \
+public:                                                                                                                                    \
+    using CppType = Name
 
 #define META_BASE(Name, Parent, ...)                                                                                                       \
+public:                                                                                                                                    \
     using Super = Parent;                                                                                                                  \
     using Super::Super;                                                                                                                    \
+    META_METHODS(Name, __VA_ARGS__)                                                                                                        \
+private:                                                                                                                                   \
     pack::Meta m_meta = pack::Meta(#Name, Parent::meta(), __VA_ARGS__);                                                                    \
-    META_METHODS(Name, __VA_ARGS__)
+                                                                                                                                           \
+public:                                                                                                                                    \
+    using CppType = Name
 
 
 class Node : public Attribute
@@ -55,18 +80,25 @@ public:
     Node(Node&& other)      = default;
     Node(const Node& other) = default;
 
-    int     compare(const Attribute& other) const override;
-    UString typeName() const override;
-    void    set(const Attribute& other) override;
-    void    set(Attribute&& other) override;
-    bool    empty() const override;
-    void    clear() override;
+    template <typename... Options>
+    Node(Options&&... args)
+    requires allIsOptions<Options...>
+        : Attribute(NodeType::Node, std::forward<Options>(args)...)
+    {
+    }
+
+    [[nodiscard]] int     compare(const Attribute& other) const override;
+    [[nodiscard]] UString typeName() const override;
+    void                  set(const Attribute& other) override;
+    void                  set(Attribute&& other) override;
+    [[nodiscard]] bool    empty() const override;
+    void                  clear() override;
 
     bool operator==(const Node& other) const;
 
     static const std::vector<pack::UString>& staticFieldNames();
 
-    virtual const Meta& meta() const = 0;
+    [[nodiscard]] virtual const Meta& meta() const = 0;
 
 protected:
     void copyFields(const Node& other);
