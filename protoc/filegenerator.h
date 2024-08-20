@@ -18,30 +18,25 @@
 ========================================================================================================================================= */
 #pragma once
 
-#include "pack/attribute.h"
-#include "pack/utils.h"
+#include <google/protobuf/compiler/code_generator.h>
+#include <google/protobuf/io/printer.h>
 
-namespace pack {
+namespace google::protobuf::compiler::pack {
 
-enum class Option
+class ClassGenerator;
+
+class FileGenerator
 {
-    No           = 1 << 0,
-    WithDefaults = 1 << 1,
-    PrettyPrint  = 1 << 2
+public:
+    FileGenerator(const FileDescriptor* file);
+    ~FileGenerator();
+
+    void        generateHeader(io::Printer& printer) const;
+    std::string getDescriptor() const;
+
+private:
+    const FileDescriptor*       m_file;
+    std::vector<ClassGenerator> m_generators;
 };
 
-ENABLE_FLAGS(Option)
-
-enum class Serializer
-{
-    Json,
-    Yaml,
-    Protobuf
-};
-
-expected<UString> serialize(Serializer serializer, const Attribute& node, Option opt = Option::No);
-expected<void>    serializeFile(Serializer serializer, const UString& fileName, const Attribute& node, Option opt = Option::No);
-expected<void>    deserialize(Serializer serializer, const UString& content, Attribute& node);
-expected<void>    deserializeFile(Serializer serializer, const UString& fileName, Attribute& node);
-
-} // namespace pack
+} // namespace google::protobuf::compiler::pack

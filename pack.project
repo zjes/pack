@@ -43,6 +43,8 @@ pack = cmake.SharedLib(
         "src/providers/json.h",
         "src/providers/yaml.cpp",
         "src/providers/yaml.h",
+        "src/providers/protobuf.cpp",
+        "src/providers/protobuf.h",
     ],
     dependencies = [
         cmake.Dependency("yaml-cpp"),
@@ -55,6 +57,29 @@ pack = cmake.SharedLib(
         "-fsanitize=leak",
     ]
 )
+
+if withProtobuf.isSet():
+    protoc = cmake.Executable(
+        "protoc-gen-pack",
+        sources = [
+            "protoc/main.cpp",
+            "protoc/generator.h",
+            "protoc/generator.cpp",
+            "protoc/filegenerator.h",
+            "protoc/filegenerator.cpp",
+            "protoc/classgenerator.h",
+            "protoc/classgenerator.cpp",
+            "protoc/formatter.h",
+            "protoc/utils.h",
+        ],
+        dependencies = [
+            cmake.Dependency("Protobuf", targetName = "protobuf::libprotobuf"),
+            cmake.Dependency("libprotoc", targetName = "protobuf::libprotoc"),
+        ],
+        options = [
+            "PROTOBUF_USE_DLLS"
+        ]
+    )
 
 if withQt.isSet():
     pack.dependencies.append("Qt6::Core")
@@ -79,5 +104,9 @@ if cmake.Config.buildTesting:
 
         "tests/serialize/value.cpp",
         "tests/serialize/node.cpp",
-    ]
-    )
+    ])
+    if withProtobuf.isSet():
+        pack.addTest([
+            "tests/protobuf/example.proto",
+            "tests/protobuf/item.cpp"
+        ])

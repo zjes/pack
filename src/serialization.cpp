@@ -1,5 +1,6 @@
 #include "pack/serialization.h"
 #include "providers/json.h"
+#include "providers/protobuf.h"
 #include "providers/yaml.h"
 #include <fstream>
 
@@ -47,6 +48,8 @@ expected<UString> serialize(Serializer serializer, const Attribute& node, Option
             return Serialization::serialize<JsonSerialization>(node, opt);
         case Serializer::Yaml:
             return Serialization::serialize<YamlSerialization>(node, opt);
+        case Serializer::Protobuf:
+            return Serialization::serialize<ProtobufSerialization>(node, opt);
     }
     return unexpected(format("Unimplemented type: {}"_s, convert<UString>(serializer)));
 }
@@ -67,6 +70,8 @@ expected<void> deserialize(Serializer serializer, const UString& content, Attrib
             return Serialization::deserialize<JsonDeserialization>(node, content);
         case Serializer::Yaml:
             return Serialization::deserialize<YamlDeserialization>(node, content);
+        case Serializer::Protobuf:
+            return Serialization::deserialize<ProtobufDeserialization>(node, content);
     }
     return unexpected(format("Unimplemented type: {}"_s, convert<UString>(serializer)));
 }

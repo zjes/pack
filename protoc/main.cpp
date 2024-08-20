@@ -16,32 +16,11 @@
    You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
-#pragma once
+#include "generator.h"
+#include <google/protobuf/compiler/plugin.h>
 
-#include "pack/attribute.h"
-#include "pack/utils.h"
-
-namespace pack {
-
-enum class Option
+int main(int argc, char* argv[])
 {
-    No           = 1 << 0,
-    WithDefaults = 1 << 1,
-    PrettyPrint  = 1 << 2
-};
-
-ENABLE_FLAGS(Option)
-
-enum class Serializer
-{
-    Json,
-    Yaml,
-    Protobuf
-};
-
-expected<UString> serialize(Serializer serializer, const Attribute& node, Option opt = Option::No);
-expected<void>    serializeFile(Serializer serializer, const UString& fileName, const Attribute& node, Option opt = Option::No);
-expected<void>    deserialize(Serializer serializer, const UString& content, Attribute& node);
-expected<void>    deserializeFile(Serializer serializer, const UString& fileName, Attribute& node);
-
-} // namespace pack
+    google::protobuf::compiler::pack::Generator generator;
+    return google::protobuf::compiler::PluginMain(argc, argv, &generator);
+}

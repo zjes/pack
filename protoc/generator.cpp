@@ -16,32 +16,31 @@
    You should have received a copy of the GNU Lesser General Public License along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 ========================================================================================================================================= */
-#pragma once
+#include "generator.h"
+#include "filegenerator.h"
+#include "utils.h"
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/io/zero_copy_stream.h>
 
-#include "pack/attribute.h"
-#include "pack/utils.h"
+namespace google::protobuf::compiler::pack {
 
-namespace pack {
-
-enum class Option
+Generator::Generator()
 {
-    No           = 1 << 0,
-    WithDefaults = 1 << 1,
-    PrettyPrint  = 1 << 2
-};
+}
 
-ENABLE_FLAGS(Option)
-
-enum class Serializer
+bool Generator::Generate(
+    const FileDescriptor* file, const std::string& /*parameter*/, GeneratorContext* context, std::string* /*error*/) const
 {
-    Json,
-    Yaml,
-    Protobuf
-};
+    FileGenerator generator(file);
 
-expected<UString> serialize(Serializer serializer, const Attribute& node, Option opt = Option::No);
-expected<void>    serializeFile(Serializer serializer, const UString& fileName, const Attribute& node, Option opt = Option::No);
-expected<void>    deserialize(Serializer serializer, const UString& content, Attribute& node);
-expected<void>    deserializeFile(Serializer serializer, const UString& fileName, Attribute& node);
+    {
+        std::string                               fileName = genFileName(file);
+        std::unique_ptr<io::ZeroCopyOutputStream> output(context->Open(fileName));
+        io::Printer                               printer(output.get(), '$');
+        generator.generateHeader(printer);
+    }
 
-} // namespace pack
+    return true;
+}
+
+} // namespace google::protobuf::compiler::pack

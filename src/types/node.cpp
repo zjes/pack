@@ -86,4 +86,15 @@ const std::vector<pack::UString>& Node::staticFieldNames()
     return items;
 }
 
+const std::string& Node::fileDescriptor() const
+{
+    static std::string desc;
+    return desc;
+}
+
+std::string Node::protoName() const
+{
+    return {};
+}
+
 } // namespace pack

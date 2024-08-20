@@ -18,30 +18,18 @@
 ========================================================================================================================================= */
 #pragma once
 
-#include "pack/attribute.h"
-#include "pack/utils.h"
+#include <google/protobuf/descriptor.h>
 
-namespace pack {
+namespace google::protobuf::compiler::pack {
 
-enum class Option
+inline std::string genFileName(const FileDescriptor* file)
 {
-    No           = 1 << 0,
-    WithDefaults = 1 << 1,
-    PrettyPrint  = 1 << 2
-};
+    std::string name  = file->name();
+    size_t      index = name.find_last_of('.');
+    if (index != std::string::npos) {
+        return name.substr(0, index) + ".h";
+    }
+    return name;
+}
 
-ENABLE_FLAGS(Option)
-
-enum class Serializer
-{
-    Json,
-    Yaml,
-    Protobuf
-};
-
-expected<UString> serialize(Serializer serializer, const Attribute& node, Option opt = Option::No);
-expected<void>    serializeFile(Serializer serializer, const UString& fileName, const Attribute& node, Option opt = Option::No);
-expected<void>    deserialize(Serializer serializer, const UString& content, Attribute& node);
-expected<void>    deserializeFile(Serializer serializer, const UString& fileName, Attribute& node);
-
-} // namespace pack
+} // namespace google::protobuf::compiler::pack

@@ -48,6 +48,7 @@ using FloatList  = List<Float>;
 using DoubleList = List<Double>;
 using BoolList   = List<Bool>;
 using StringList = List<String>;
+using BinaryList = List<Binary>;
 
 // =========================================================================================================================================
 

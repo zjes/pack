@@ -100,6 +100,9 @@ public:
 
     [[nodiscard]] virtual const Meta& meta() const = 0;
 
+    [[nodiscard]] virtual const std::string& fileDescriptor() const;
+    [[nodiscard]] virtual std::string        protoName() const;
+
 protected:
     void copyFields(const Node& other);
     void moveFields(Node&& other);
