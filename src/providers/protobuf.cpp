@@ -22,6 +22,7 @@
 #include <google/protobuf/descriptor.pb.h>
 #include <google/protobuf/descriptor_database.h>
 #include <google/protobuf/dynamic_message.h>
+#include <google/protobuf/text_format.h>
 
 namespace pack {
 
@@ -332,16 +333,17 @@ public:
 };
 
 
-static pb::Message* getMessage(const Attribute& attr)
+static expected<pb::Message*> getMessage(const Attribute& attr)
 {
-    if (const Node* node = dynamic_cast<const Node*>(&attr)) {
-        static pb::SimpleDescriptorDatabase db;
-        static pb::DescriptorPool           pool(&db);
+    static pb::SimpleDescriptorDatabase db;
+    static pb::DescriptorPool           pool(&db);
 
+    if (const auto* node = dynamic_cast<const Node*>(&attr)) {
         auto descr = pool.FindMessageTypeByName(node->protoName());
         if (!descr) {
             pb::FileDescriptorSet fs;
-            fs.ParseFromString(node->fileDescriptor());
+            auto                  data = node->fileDescriptor();
+            fs.ParseFromArray(data.data(), int(data.size()));
             for (int i = 0; i < fs.file().size(); ++i) {
                 if (!pool.FindFileByName(fs.file(i).name())) {
                     db.Add(fs.file(i));
@@ -351,49 +353,84 @@ static pb::Message* getMessage(const Attribute& attr)
         }
 
         if (!descr) {
-            throw std::runtime_error(std::format("Cannot find description for {}", node->protoName()));
+            return unexpected("Cannot find description for {}", node->protoName());
         }
 
         static pb::DynamicMessageFactory dmf(&pool);
-
-        const pb::Message* protoMsg = dmf.GetPrototype(descr);
+        const pb::Message*               protoMsg = dmf.GetPrototype(descr);
         return protoMsg->New();
     }
-    return nullptr;
+    return unexpected("Exepected node as input parameter");
 }
 
 expected<UString> ProtobufSerialization::run(const Attribute& node, Option opt)
 {
-    try {
-        std::unique_ptr<pb::Message> msg(getMessage(node));
+    if (auto message = getMessage(node)) {
+        try {
+            std::unique_ptr<pb::Message> msg(*message);
 
-        auto proto = ProtoSerializer::WalkType(msg.get(), nullptr);
-        ProtoSerializer::visit(node, proto, opt);
-        return msg->SerializeAsString();
-    } catch (const google::protobuf::FatalException& ex) {
-        return unexpected(ex.message());
-    } catch (const std::exception& ex) {
-        return unexpected(ex.what());
+            auto proto = ProtoSerializer::WalkType(msg.get(), nullptr);
+            ProtoSerializer::visit(node, proto, opt);
+            return msg->SerializeAsString();
+        } catch (const google::protobuf::FatalException& ex) {
+            return unexpected(ex.message());
+        }
+    } else {
+        return unexpected(message.error());
     }
 }
 
 expected<void> ProtobufDeserialization::run(Attribute& node, const UString& content)
 {
-    try {
-        std::unique_ptr<pb::Message> msg(getMessage(node));
+    if (auto message = getMessage(node)) {
+        std::unique_ptr<pb::Message> msg(*message);
         try {
             msg->ParseFromString(content.toStdString());
+            auto proto = ProtoDeserializer::WalkType(msg.get(), nullptr);
+            ProtoDeserializer::visit(node, proto);
+            return {};
         } catch (const google::protobuf::FatalException& ex) {
             return unexpected(ex.message());
         }
-
-        auto proto = ProtoDeserializer::WalkType(msg.get(), nullptr);
-        ProtoDeserializer::visit(node, proto);
-        return {};
-    } catch (const std::exception& e) {
-        return unexpected(e.what());
+    } else {
+        return unexpected(message.error());
     }
 }
 
+expected<UString> ProtobufTextSerialization::run(const Attribute& node, Option opt)
+{
+    if (auto message = getMessage(node)) {
+        try {
+            std::unique_ptr<pb::Message> msg(*message);
+
+            auto proto = ProtoSerializer::WalkType(msg.get(), nullptr);
+            ProtoSerializer::visit(node, proto, opt);
+            std::string out;
+            google::protobuf::TextFormat::PrintToString(*msg, &out);
+            return out;
+        } catch (const google::protobuf::FatalException& ex) {
+            return unexpected(ex.message());
+        }
+    } else {
+        return unexpected(message.error());
+    }
+}
+
+expected<void> ProtobufTextDeserialization::run(Attribute& node, const UString& content)
+{
+    if (auto message = getMessage(node)) {
+        std::unique_ptr<pb::Message> msg(*message);
+        try {
+            google::protobuf::TextFormat::ParseFromString(content.toStdString(), *message);
+            auto proto = ProtoDeserializer::WalkType(msg.get(), nullptr);
+            ProtoDeserializer::visit(node, proto);
+            return {};
+        } catch (const google::protobuf::FatalException& ex) {
+            return unexpected(ex.message());
+        }
+    } else {
+        return unexpected(message.error());
+    }
+}
 
 } // namespace pack

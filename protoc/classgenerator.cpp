@@ -104,12 +104,8 @@ static std::tuple<int, std::string> split(const std::string& s, char delim)
 
 void ClassGenerator::generateHeader(Formatter& frm, const std::string& descNamespace, bool asMap) const
 {
-    frm << "class " << m_desc->name() << ": public pack::Node"
-        << "\n";
+    frm << "class " << m_desc->name() << ": public pack::Node" << "\n";
     frm << "{\n";
-    frm << "public:\n";
-    frm.indent();
-    frm << "using pack::Node::Node;\n\n";
     if (asMap) {
         std::string key;
         std::string value;
@@ -187,8 +183,7 @@ void ClassGenerator::generateHeader(Formatter& frm, const std::string& descNames
             def = ", " + def;
         }
 
-        frm << cppType(fld) << " " << fld->camelcase_name() << " = FIELD(\"" << fld->name() << "\"" << def << ")"
-            << ";\n";
+        frm << cppType(fld) << " " << fld->camelcase_name() << " = FIELD(\"" << fld->name() << "\"" << def << ")" << ";\n";
     }
 
     frm << "\n";
@@ -203,19 +198,9 @@ void ClassGenerator::generateHeader(Formatter& frm, const std::string& descNames
     frm << "public:\n";
     frm.indent();
 
-    frm << "const std::string& fileDescriptor() const override\n";
-    frm << "{\n";
-    frm.indent();
-    frm << "return " << descNamespace << "::descriptor();\n";
-    frm.outdent();
-    frm << "}\n\n";
+    frm << "const std::vector<uint8_t>& fileDescriptor() const override;\n";
+    frm << "std::string protoName() const override;\n";
 
-    frm << "std::string protoName() const override\n";
-    frm << "{\n";
-    frm.indent();
-    frm << "return \"" << m_desc->full_name() << "\";\n";
-    frm.outdent();
-    frm << "}\n\n";
     frm.outdent();
 
     if (m_desc->oneof_decl_count()) {
@@ -237,6 +222,23 @@ void ClassGenerator::generateHeader(Formatter& frm, const std::string& descNames
     frm.outdent();
     frm << "};\n";
     frm << "\n";
+}
+
+void ClassGenerator::generateSource(Formatter& frm, const std::string& descNamespace, bool asMap) const
+{
+    frm << "const std::vector<uint8_t>& " << m_desc->name() << "::fileDescriptor() const\n";
+    frm << "{\n";
+    frm.indent();
+    frm << "return " << descNamespace << "::descriptor();\n";
+    frm.outdent();
+    frm << "}\n\n";
+
+    frm << "std::string " << m_desc->name() << "::protoName() const\n";
+    frm << "{\n";
+    frm.indent();
+    frm << "return \"" << m_desc->full_name() << "\";\n";
+    frm.outdent();
+    frm << "}\n\n";
 }
 
 std::string ClassGenerator::cppType(const FieldDescriptor* fld) const

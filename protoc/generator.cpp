@@ -33,12 +33,16 @@ bool Generator::Generate(
 {
     FileGenerator generator(file);
 
-    {
-        std::string                               fileName = genFileName(file);
-        std::unique_ptr<io::ZeroCopyOutputStream> output(context->Open(fileName));
-        io::Printer                               printer(output.get(), '$');
-        generator.generateHeader(printer);
-    }
+    std::string fileName = genFileName(file);
+
+    std::unique_ptr<io::ZeroCopyOutputStream> outputH(context->Open(fileName + ".h"));
+    std::unique_ptr<io::ZeroCopyOutputStream> outputCpp(context->Open(fileName + ".cpp"));
+
+    io::Printer printerH(outputH.get(), '$');
+    io::Printer printerCpp(outputCpp.get(), '$');
+
+    generator.generateHeader(printerH);
+    generator.generateSource(printerCpp);
 
     return true;
 }

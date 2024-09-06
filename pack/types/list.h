@@ -127,12 +127,14 @@ public:
     {
     }
 
-    template <typename... Options>
-    List(std::initializer_list<T> values)
-    requires isValueConstructable<T, ValueType> && (!isSubtype<Node, T>)
+    template <typename Value>
+    List(std::initializer_list<Value> values)
+    requires(!isOption<Value>) && isValueConstructable<Value, T> && (!isSubtype<Node, Value>)
         : IList()
-        , m_value(values)
     {
+        for (const auto& val : values) {
+            m_value.emplace_back(val);
+        }
     }
 
 public:
@@ -160,20 +162,21 @@ public:
     void setVector(std::vector<TT>&& value)
     requires isValueConstructable<TT, ValueType>
     {
-        m_value = std::vector<TT>(m_value.end(), std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()));
+        m_value = ListType(m_value.end(), std::make_move_iterator(value.begin()), std::make_move_iterator(value.end()));
     }
 
     template <typename TT>
     void setVector(const std::vector<TT>& value)
     requires isValueConstructable<TT, ValueType>
     {
-        m_value = std::vector<TT>(m_value.end(), value.begin(), value.end());
+        m_value = ListType(m_value.end(), value.begin(), value.end());
     }
 
     void operator=(std::initializer_list<ValueType> values)
     {
-        m_value = std::vector<T>(values.begin(), values.end());
+        m_value = ListType(values.begin(), values.end());
     }
+
 
     bool operator==(const std::vector<ValueType>& values) const
     {
@@ -385,9 +388,9 @@ public:
     [[nodiscard]] int compare(const Attribute& other) const override
     {
         if (auto casted = dynamic_cast<const List*>(&other)) {
-            return casted->toVector() == m_value;
+            return casted->toVector() == m_value ? 0 : 1;
         }
-        return false;
+        return -1;
     }
 
     [[nodiscard]] UString typeName() const override

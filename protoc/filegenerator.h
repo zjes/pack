@@ -32,6 +32,7 @@ public:
     ~FileGenerator();
 
     void        generateHeader(io::Printer& printer) const;
+    void        generateSource(io::Printer& printer) const;
     std::string getDescriptor() const;
 
 private:

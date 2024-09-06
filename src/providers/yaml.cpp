@@ -1,6 +1,5 @@
 #include "yaml.h"
 #include "pack/visitor.h"
-#include <iostream>
 #include <yaml-cpp/yaml.h>
 
 template <>

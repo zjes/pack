@@ -86,9 +86,9 @@ const std::vector<pack::UString>& Node::staticFieldNames()
     return items;
 }
 
-const std::string& Node::fileDescriptor() const
+const std::vector<uint8_t>& Node::fileDescriptor() const
 {
-    static std::string desc;
+    static std::vector<uint8_t> desc;
     return desc;
 }
 

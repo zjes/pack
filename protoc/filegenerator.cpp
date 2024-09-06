@@ -53,23 +53,12 @@ FileGenerator::FileGenerator(const FileDescriptor* file)
     }
 }
 
-void FileGenerator::generateHeader(io::Printer& printer) const
+static std::string genPath(const std::string& fileName)
 {
-    Formatter frm(printer);
-
-    frm << "#pragma once\n";
-
-    for (int i = 0; i < m_file->dependency_count(); ++i) {
-        auto dep = m_file->dependency(i);
-        frm << "#include \"" << genFileName(dep) << "\"\n";
-    }
-    frm << "#include <pack/pack.h>\n";
-    frm << "\n";
-
     std::string path  = "file";
-    size_t      index = m_file->name().find_last_of('.');
+    size_t      index = fileName.find_last_of('.');
     if (index != std::string::npos) {
-        path                     = m_file->name().substr(0, index);
+        path                     = fileName.substr(0, index);
         std::string::size_type n = 0;
         while ((n = path.find("/", n)) != std::string::npos) {
             path.replace(n, 1, "::");
@@ -81,50 +70,30 @@ void FileGenerator::generateHeader(io::Printer& printer) const
             ++n;
         }
     }
+    return path;
+}
 
-    std::stringstream ss;
-    bool              wasText = false;
-    bool              wasHex  = false;
-    for (const char& ch : getDescriptor()) {
-        if (std::isalnum(ch)) {
-            ss << (wasHex ? "\" \"" : "") << ch;
-            wasText = true;
-            wasHex  = false;
-        } else {
-            ss << (wasText ? "\" \"" : "") << "\\x" << std::setfill('0') << std::setw(2) << std::hex
-               << static_cast<uint32_t>(static_cast<uint8_t>(ch));
-            wasHex  = true;
-            wasText = false;
-        }
+void FileGenerator::generateHeader(io::Printer& printer) const
+{
+    Formatter frm(printer);
+
+    frm << "#pragma once\n";
+
+    for (int i = 0; i < m_file->dependency_count(); ++i) {
+        auto dep = m_file->dependency(i);
+        frm << "#include \"" << genFileName(dep) << ".h" << "\"\n";
     }
-    frm << "// "
-           "================================================================================================="
-           "==========\n";
-    frm << "// Protobuf file descriptor\n";
-    frm << "// "
-           "================================================================================================="
-           "==========\n";
-    frm << "namespace " << path << " {\n\n";
-    frm << "inline const std::string& descriptor()\n";
-    frm << "{\n";
-    frm.indent();
-    frm << "static std::string desc(\"" << ss.str() << "\", " << ss.str().size() << ");\n";
-    frm << "return desc;\n";
-    frm.outdent();
-    frm << "}\n";
-    frm << "}\n\n";
+    frm << "#include <pack/pack.h>\n";
+    frm << "\n";
 
-    frm << "// "
-           "================================================================================================="
-           "==========\n";
+    frm << "// ===========================================================================================================\n";
     frm << "// Pack files\n";
-    frm << "// "
-           "================================================================================================="
-           "==========\n";
+    frm << "// ===========================================================================================================\n";
     if (!m_file->package().empty()) {
         frm << "namespace " << m_file->package() << " {\n\n";
     }
 
+    auto path = genPath(m_file->name());
     for (int i = 0; i < m_file->message_type_count(); i++) {
         ClassGenerator gen(m_file->message_type(i));
         gen.generateHeader(frm, path);
@@ -187,6 +156,68 @@ void FileGenerator::generateHeader(io::Printer& printer) const
     if (!m_file->package().empty()) {
         frm << "}\n";
     }
+    frm.outdent();
+}
+
+void FileGenerator::generateSource(io::Printer& printer) const
+{
+    Formatter frm(printer);
+    frm << "#include \"" << genFileName(m_file) << ".h\"\n";
+    frm << "#include <string>\n\n";
+
+    std::stringstream ss;
+    // bool              wasText = false;
+    // bool              wasHex  = false;
+    bool first = true;
+    for (const char& ch : getDescriptor()) {
+        ss << (first ? "" : ", ") << "0x" << std::setfill('0') << std::setw(2) << std::hex
+           << static_cast<uint32_t>(static_cast<uint8_t>(ch));
+        first = false;
+        // if (std::isalnum(ch)) {
+        //     ss << (wasHex ? "\" \"" : "") << ch;
+        //     wasText = true;
+        //     wasHex  = false;
+        // } else {
+        //     ss << (wasText ? "\" \"" : "") << "\\x" << std::setfill('0') << std::setw(2) << std::hex
+        //        << static_cast<uint32_t>(static_cast<uint8_t>(ch));
+        //     wasHex  = true;
+        //     wasText = false;
+        // }
+    }
+
+    frm << "// ===========================================================================================================\n";
+    frm << "// Protobuf file descriptor\n";
+    frm << "// ===========================================================================================================\n";
+
+    auto path = genPath(m_file->name());
+
+    frm << "namespace " << path << " {\n\n";
+    frm << "static const std::vector<uint8_t>& descriptor()\n";
+    frm << "{\n";
+    frm.indent();
+    frm << "static std::vector<uint8_t> desc = {" << ss.str() << "};\n";
+    frm << "return desc;\n";
+    frm.outdent();
+    frm << "}\n\n";
+    frm << "}\n\n";
+
+    frm << "// ===========================================================================================================\n";
+    frm << "// Pack files\n";
+    frm << "// ===========================================================================================================\n";
+
+    if (!m_file->package().empty()) {
+        frm << "namespace " << m_file->package() << " {\n\n";
+    }
+
+    for (int i = 0; i < m_file->message_type_count(); i++) {
+        ClassGenerator gen(m_file->message_type(i));
+        gen.generateSource(frm, path);
+    }
+
+    if (!m_file->package().empty()) {
+        frm << "}\n";
+    }
+
     frm.outdent();
 }
 

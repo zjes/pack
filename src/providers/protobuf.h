@@ -17,4 +17,16 @@ public:
     static expected<void> run(Attribute& node, const UString& content);
 };
 
+class ProtobufTextSerialization
+{
+public:
+    static expected<UString> run(const Attribute& node, Option opt);
+};
+
+class ProtobufTextDeserialization
+{
+public:
+    static expected<void> run(Attribute& node, const UString& content);
+};
+
 } // namespace pack

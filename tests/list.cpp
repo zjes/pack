@@ -18,7 +18,7 @@
 
 TEST_CASE("new list")
 {
-    pack::List<pack::Int32> ilist = {{10, 12}};
+    pack::List<pack::Int32> ilist = {10, 12};
     REQUIRE(ilist.size() == 2);
     CHECK(ilist.type() == pack::Attribute::NodeType::List);
 
@@ -154,13 +154,13 @@ TEST_CASE("new list")
     SECTION("compare")
     {
         auto list = ilist;
-        CHECK(list.compare(ilist));
+        CHECK(list.compare(ilist) == 0);
 
         decltype(ilist) list2;
-        CHECK(!list2.compare(ilist));
+        CHECK(list2.compare(ilist) != 0);
 
         list.append(43);
-        CHECK(!list.compare(ilist));
+        CHECK(list.compare(ilist) != 0);
     }
 
     // SECTION("typeName")

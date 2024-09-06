@@ -10,6 +10,12 @@ struct Item : public pack::Node
     META(Item, item);
 };
 
+struct ItemList : public pack::Node
+{
+    pack::Int32List lst = FIELD("lst");
+    META(ItemList, lst);
+};
+
 } // namespace
 
 TEST_CASE("simple node")
@@ -67,4 +73,11 @@ TEST_CASE("simple node")
     UpItem ui;
     ui.item = "aaaa"_s;
     ui.work = "wwww"_s;
+}
+
+TEST_CASE("list node")
+{
+    ItemList l;
+    l.lst.append(42);
+    CHECK(l.lst.key() == "lst");
 }

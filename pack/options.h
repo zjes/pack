@@ -62,8 +62,11 @@ DefaultValue(T (*)()) -> DefaultValue<T>;
 
 // =========================================================================================================================================
 
+template <typename Arg>
+concept isOption = (std::is_base_of_v<FieldOption, Arg>);
+
 template <typename... Args>
-concept allIsOptions = (std::is_base_of_v<FieldOption, Args> && ...);
+concept allIsOptions = (isOption<Args> && ...);
 
 // =========================================================================================================================================
 

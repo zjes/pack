@@ -49,7 +49,6 @@ public:
 template <typename T>
 concept isValue = std::is_base_of_v<IValue, T>;
 
-
 template <typename T, typename CppType>
 concept isValueConstructable = isSame<CppType, T> || isConvertable<CppType, T>;
 

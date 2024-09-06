@@ -36,7 +36,8 @@ enum class Serializer
 {
     Json,
     Yaml,
-    Protobuf
+    Protobuf,
+    ProtobufText,
 };
 
 expected<UString> serialize(Serializer serializer, const Attribute& node, Option opt = Option::No);

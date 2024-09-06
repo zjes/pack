@@ -1,4 +1,5 @@
 find_package(Protobuf COMPONENTS protoc)
+
 macro(pack_protogen)
     cmake_parse_arguments(arg
         ""
@@ -17,7 +18,7 @@ macro(pack_protogen)
     if (PACK_BIN_DIR)
         set(plugin ${PACK_BIN_DIR}/protoc-gen-pack)
     else()
-        set(plugin ${CMAKE_BINARY_DIR}/pack/protoc/protoc-gen-pack)
+        set(plugin ${CMAKE_CURRENT_BINARY_DIR}/protoc-gen-pack)
     endif()
 
     foreach(proto ${arg_PROTO})
@@ -34,7 +35,10 @@ macro(pack_protogen)
         get_filename_component(genName ${proto} NAME_WE)
         get_filename_component(getPath ${proto} DIRECTORY)
 
-        set(result ${CMAKE_CURRENT_BINARY_DIR}/${getPath}/${genName}.h)
+        set(result
+            ${CMAKE_CURRENT_BINARY_DIR}/${getPath}/${genName}.h
+            ${CMAKE_CURRENT_BINARY_DIR}/${getPath}/${genName}.cpp
+        )
 
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${outDir})
 

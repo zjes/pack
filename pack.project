@@ -3,6 +3,11 @@ import cmake
 withProtobuf = cmake.Option("WITH_PROTOBUF", False)
 withQt = cmake.Option("WITH_QT", False)
 
+if withProtobuf.isSet():
+    import sys
+    sys.path.append(cmake.Config.currentPath()+"/protoc/cmake")
+    import protogen
+
 pack = cmake.SharedLib(
     "pack",
     sources = [
@@ -43,8 +48,6 @@ pack = cmake.SharedLib(
         "src/providers/json.h",
         "src/providers/yaml.cpp",
         "src/providers/yaml.h",
-        "src/providers/protobuf.cpp",
-        "src/providers/protobuf.h",
     ],
     dependencies = [
         cmake.Dependency("yaml-cpp"),
@@ -59,6 +62,14 @@ pack = cmake.SharedLib(
 )
 
 if withProtobuf.isSet():
+    pack.sources.extend([
+        "src/providers/protobuf.cpp",
+        "src/providers/protobuf.h",
+    ])
+    pack.dependencies.append(
+        cmake.Dependency("Protobuf", targetName = "protobuf::libprotobuf"),
+    )
+
     protoc = cmake.Executable(
         "protoc-gen-pack",
         sources = [
@@ -71,6 +82,8 @@ if withProtobuf.isSet():
             "protoc/classgenerator.cpp",
             "protoc/formatter.h",
             "protoc/utils.h",
+            "protoc/cmake/protogen.cmake",
+            "protoc/cmake/protogen.py"
         ],
         dependencies = [
             cmake.Dependency("Protobuf", targetName = "protobuf::libprotobuf"),
@@ -90,7 +103,7 @@ else:
     pack.dependencies.append("utf8cpp")
 
 if cmake.Config.buildTesting:
-    pack.addTest([
+    test = pack.addTest([
         "tests/catch2.h",
         "tests/ustring.cpp",
         "tests/types.cpp",
@@ -106,7 +119,11 @@ if cmake.Config.buildTesting:
         "tests/serialize/node.cpp",
     ])
     if withProtobuf.isSet():
-        pack.addTest([
+        test.sources.extend([
             "tests/protobuf/example.proto",
             "tests/protobuf/item.cpp"
         ])
+
+        protogen.generate(test,
+            "tests/protobuf/example.proto"
+        )

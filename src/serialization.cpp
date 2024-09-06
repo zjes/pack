@@ -50,6 +50,8 @@ expected<UString> serialize(Serializer serializer, const Attribute& node, Option
             return Serialization::serialize<YamlSerialization>(node, opt);
         case Serializer::Protobuf:
             return Serialization::serialize<ProtobufSerialization>(node, opt);
+        case Serializer::ProtobufText:
+            return Serialization::serialize<ProtobufTextSerialization>(node, opt);
     }
     return unexpected(format("Unimplemented type: {}"_s, convert<UString>(serializer)));
 }
@@ -72,6 +74,8 @@ expected<void> deserialize(Serializer serializer, const UString& content, Attrib
             return Serialization::deserialize<YamlDeserialization>(node, content);
         case Serializer::Protobuf:
             return Serialization::deserialize<ProtobufDeserialization>(node, content);
+        case Serializer::ProtobufText:
+            return Serialization::deserialize<ProtobufTextDeserialization>(node, content);
     }
     return unexpected(format("Unimplemented type: {}"_s, convert<UString>(serializer)));
 }
